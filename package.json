@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/api/client.test.ts"
+    "test": "node --import tsx --test src/lib/api/client.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
