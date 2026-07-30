@@ -4,7 +4,7 @@
 
 **Goal:** Stand up the FixItNow frontend's foundation: a working Next.js app with a typed API client, JWT auth (register/login), cookie-bridged Next.js Middleware route protection, and the shared error/loading UI patterns every later sub-project reuses.
 
-**Architecture:** Next.js App Router with a thin typed API client wrapping the Express backend's `{success, data, meta}` envelope. Zustand holds the authenticated user in memory, hydrated on load from a client-set cookie via `GET /auth/me`. `middleware.ts` reads that same cookie (unsigned decode — routing convenience, not a security boundary) to gate `/dashboard/<role>` access. TanStack Query handles server-state caching/mutations; Shadcn UI supplies accessible form/toast/skeleton primitives.
+**Architecture:** Next.js App Router with a thin typed API client wrapping the Express backend's `{success, data, meta}` envelope. Zustand holds the authenticated user in memory, hydrated on load from a client-set cookie via `GET /auth/me`. `src/proxy.ts` (Next.js's current name for what was previously the `middleware.ts` convention — this installed version deprecated the old name) reads that same cookie (unsigned decode — routing convenience, not a security boundary) to gate `/dashboard/<role>` access. TanStack Query handles server-state caching/mutations; Shadcn UI supplies accessible form/toast/skeleton primitives.
 
 **Tech Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · Shadcn UI · TanStack Query · Zustand · React Hook Form + Zod · js-cookie · `node:test` (via `tsx`) for unit tests
 
@@ -24,8 +24,8 @@ Reference spec: `docs/superpowers/specs/2026-07-30-foundation-auth-design.md`
 ### Task 1: Scaffold Next.js app, install dependencies, initialize Shadcn UI
 
 **Files:**
-- Create: entire Next.js scaffold (`package.json`, `tsconfig.json`, `next.config.ts`, `app/`, `public/`, `.gitignore`, `next-env.d.ts`)
-- Create: `components.json`, `lib/utils.ts`, `components/ui/*` (shadcn init + components)
+- Create: entire Next.js scaffold (`package.json`, `tsconfig.json`, `next.config.ts`, `src/app/`, `public/`, `.gitignore`, `next-env.d.ts`) — uses `--src-dir`, so app code lives under `src/`
+- Create: `components.json`, `src/lib/utils.ts`, `src/components/ui/*` (shadcn init + components)
 - Create: `.env.example`, `.env.local`
 
 **Interfaces:**
@@ -60,9 +60,11 @@ npm install -D @types/js-cookie tsx
 
 - [ ] **Step 4: Initialize Shadcn UI with defaults, add the components this sub-project needs**
 
+This shadcn CLI generation (v4.x, "base-nova" style on Base UI) no longer ships a `form` component — its registry entry is an intentionally empty stub (no `Form`/`FormField`/`FormControl`/`FormItem`/`FormLabel`/`FormMessage`). Its replacement is `field` (`Field`, `FieldLabel`, `FieldError`, `FieldGroup`, ...), designed to pair directly with react-hook-form's own `register`/`Controller` — no context-wrapper component needed. Install `field` instead of `form`; it pulls in `separator` automatically as its one registry dependency.
+
 ```bash
 npx --yes shadcn@latest init -d
-npx --yes shadcn@latest add button input label form card sonner skeleton dropdown-menu select
+npx --yes shadcn@latest add button input label card sonner skeleton dropdown-menu select field
 ```
 
 - [ ] **Step 5: Add the `test` script to `package.json`**
@@ -70,10 +72,10 @@ npx --yes shadcn@latest add button input label form card sonner skeleton dropdow
 Modify the `"scripts"` section to add:
 
 ```json
-"test": "node --import tsx --test lib/api/client.test.ts"
+"test": "node --import tsx --test src/lib/api/client.test.ts"
 ```
 
-(This file doesn't exist yet — Task 2 creates it. Listing it now keeps the script and the test suite in sync as later tasks add files to this same list.)
+(This file doesn't exist yet — Task 2 creates it. Listing it now keeps the script and the test suite in sync as later tasks add files to this same list. Path is `src/lib/...`, not `lib/...`, because this scaffold uses `--src-dir`.)
 
 - [ ] **Step 6: Create env files**
 
@@ -103,16 +105,16 @@ git commit -m "chore: scaffold Next.js app with Tailwind, shadcn ui, and core de
 
 ### Task 2: API client and typed errors
 
-**Files:**
-- Create: `lib/api/error.ts`
-- Create: `lib/api/client.ts`
-- Test: `lib/api/client.test.ts`
+**Files (all under `src/` — this scaffold uses `--src-dir`; import paths below already use the `@/*` alias, which maps to `src/*` regardless):**
+- Create: `src/lib/api/error.ts`
+- Create: `src/lib/api/client.ts`
+- Test: `src/lib/api/client.test.ts`
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks (uses `NEXT_PUBLIC_API_URL` from Task 1's `.env.local`).
 - Produces: `class ApiError extends Error { status: number; errorDetails: {field: string; message: string}[] | null }`; `stripFieldPrefix(field: string): string`; `apiFetch<T>(path: string, options?: {token?: string | null; body?: unknown} & Omit<RequestInit, 'body'>): Promise<{data: T; meta?: Record<string, unknown>}>`.
 
-- [ ] **Step 1: Write `lib/api/error.ts`**
+- [ ] **Step 1: Write `src/lib/api/error.ts`**
 
 The backend validates each request as a whole `{body, query, params}` object (see `src/middlewares/validate.middleware.ts` in the backend repo), so a Zod failure on, say, the `email` field comes back as `errorDetails: [{field: "body.email", ...}]`, not `{field: "email", ...}`. Every form in every future sub-project needs this prefix stripped before mapping to React Hook Form's flat field names, so it belongs here alongside `ApiError`, not duplicated per-form.
 
@@ -140,7 +142,7 @@ export class ApiError extends Error {
 export const stripFieldPrefix = (field: string): string => field.replace(/^(body|query|params)\./, '');
 ```
 
-- [ ] **Step 2: Write the failing test `lib/api/client.test.ts`**
+- [ ] **Step 2: Write the failing test `src/lib/api/client.test.ts`**
 
 ```ts
 import { test } from 'node:test';
@@ -217,7 +219,7 @@ test('apiFetch throws ApiError on a network-level non-JSON failure status with n
 Run: `npm test`
 Expected: FAIL — `Cannot find module './client'`
 
-- [ ] **Step 4: Write `lib/api/client.ts`**
+- [ ] **Step 4: Write `src/lib/api/client.ts`**
 
 ```ts
 import { ApiError } from './error';
@@ -277,7 +279,7 @@ Expected: PASS (4 tests)
 - [ ] **Step 6: Commit**
 
 ```bash
-git add lib/api/error.ts lib/api/client.ts lib/api/client.test.ts package.json
+git add src/lib/api/error.ts src/lib/api/client.ts src/lib/api/client.test.ts package.json
 git commit -m "feat: add typed API client wrapping the backend response envelope"
 ```
 
@@ -285,21 +287,21 @@ git commit -m "feat: add typed API client wrapping the backend response envelope
 
 ### Task 3: Auth constants, role decoding, cookie helpers, Zustand store
 
-**Files:**
-- Create: `lib/auth/constants.ts`
-- Create: `lib/auth/decode-role.ts`
-- Test: `lib/auth/decode-role.test.ts`
-- Create: `lib/auth/cookie.ts`
-- Create: `lib/auth/store.ts`
+**Files (all under `src/` — this scaffold uses `--src-dir`):**
+- Create: `src/lib/auth/constants.ts`
+- Create: `src/lib/auth/decode-role.ts`
+- Test: `src/lib/auth/decode-role.test.ts`
+- Create: `src/lib/auth/cookie.ts`
+- Create: `src/lib/auth/store.ts`
 - Modify: `package.json` (test script)
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
-- Produces: `AUTH_COOKIE_NAME: string`, `AUTH_COOKIE_MAX_AGE_DAYS: number`, `ROLE_DASHBOARD_PATH: Record<Role, string>` from `lib/auth/constants.ts`; `type Role = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN'` and `decodeRoleFromToken(token: string): Role | null` from `lib/auth/decode-role.ts`; `setAuthCookie(token: string): void`, `getAuthCookie(): string | undefined`, `clearAuthCookie(): void` from `lib/auth/cookie.ts`; `useAuthStore` (zustand hook) exposing `{user: AuthUser | null; token: string | null; isHydrated: boolean; setAuth(user, token); clearAuth(); setHydrated()}` and `interface AuthUser {id, name, email, phone, role, status}` from `lib/auth/store.ts`.
+- Produces: `AUTH_COOKIE_NAME: string`, `AUTH_COOKIE_MAX_AGE_DAYS: number`, `ROLE_DASHBOARD_PATH: Record<Role, string>` from `src/lib/auth/constants.ts`; `type Role = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN'` and `decodeRoleFromToken(token: string): Role | null` from `src/lib/auth/decode-role.ts`; `setAuthCookie(token: string): void`, `getAuthCookie(): string | undefined`, `clearAuthCookie(): void` from `src/lib/auth/cookie.ts`; `useAuthStore` (zustand hook) exposing `{user: AuthUser | null; token: string | null; isHydrated: boolean; setAuth(user, token); clearAuth(); setHydrated()}` and `interface AuthUser {id, name, email, phone, role, status}` from `src/lib/auth/store.ts`.
 
 Note: only `decode-role.ts` gets a test in this task — it has real branching logic (valid/invalid/malformed). `cookie.ts` and `store.ts` are thin pass-throughs to `js-cookie`/`zustand` with no independent logic, so they're not tested separately. `decode-role.ts` is written before `constants.ts` so the latter can import the `Role` type instead of redeclaring the same union.
 
-- [ ] **Step 1: Write the failing test `lib/auth/decode-role.test.ts`**
+- [ ] **Step 1: Write the failing test `src/lib/auth/decode-role.test.ts`**
 
 ```ts
 import { test } from 'node:test';
@@ -332,7 +334,7 @@ test('decodeRoleFromToken returns null for a malformed token', () => {
 - [ ] **Step 2: Update `package.json`'s test script to include this test file**
 
 ```json
-"test": "node --import tsx --test lib/api/client.test.ts lib/auth/decode-role.test.ts"
+"test": "node --import tsx --test src/lib/api/client.test.ts src/lib/auth/decode-role.test.ts"
 ```
 
 - [ ] **Step 3: Run the test, verify it fails**
@@ -340,7 +342,7 @@ test('decodeRoleFromToken returns null for a malformed token', () => {
 Run: `npm test`
 Expected: FAIL — `Cannot find module './decode-role'`
 
-- [ ] **Step 4: Write `lib/auth/decode-role.ts`**
+- [ ] **Step 4: Write `src/lib/auth/decode-role.ts`**
 
 ```ts
 export type Role = 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN';
@@ -367,7 +369,7 @@ export const decodeRoleFromToken = (token: string): Role | null => {
 Run: `npm test`
 Expected: PASS (7 tests total)
 
-- [ ] **Step 6: Write `lib/auth/constants.ts`**
+- [ ] **Step 6: Write `src/lib/auth/constants.ts`**
 
 ```ts
 import type { Role } from './decode-role';
@@ -382,7 +384,7 @@ export const ROLE_DASHBOARD_PATH: Record<Role, string> = {
 };
 ```
 
-- [ ] **Step 7: Write `lib/auth/cookie.ts`**
+- [ ] **Step 7: Write `src/lib/auth/cookie.ts`**
 
 ```ts
 import Cookies from 'js-cookie';
@@ -399,7 +401,7 @@ export const clearAuthCookie = (): void => {
 };
 ```
 
-- [ ] **Step 8: Write `lib/auth/store.ts`**
+- [ ] **Step 8: Write `src/lib/auth/store.ts`**
 
 ```ts
 import { create } from 'zustand';
@@ -436,7 +438,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 - [ ] **Step 9: Commit**
 
 ```bash
-git add lib/auth/ package.json
+git add src/lib/auth/ package.json
 git commit -m "feat: add auth cookie helpers, role decoding, and zustand session store"
 ```
 
@@ -444,17 +446,17 @@ git commit -m "feat: add auth cookie helpers, role decoding, and zustand session
 
 ### Task 4: Auth Zod schemas and API functions
 
-**Files:**
-- Create: `lib/validations/auth.ts`
-- Create: `lib/api/auth.ts`
+**Files (all under `src/` — this scaffold uses `--src-dir`):**
+- Create: `src/lib/validations/auth.ts`
+- Create: `src/lib/api/auth.ts`
 
 **Interfaces:**
-- Consumes: `apiFetch` from `lib/api/client.ts` (Task 2); `AuthUser` from `lib/auth/store.ts` (Task 3).
-- Produces: `registerFormSchema`, `loginFormSchema` (Zod) and `RegisterFormValues`, `LoginFormValues` types from `lib/validations/auth.ts`; `registerUser(input): Promise<{user: AuthUser; token: string}>`, `loginUser(input): Promise<{user: AuthUser; token: string}>`, `getMe(token): Promise<AuthUser>` from `lib/api/auth.ts`.
+- Consumes: `apiFetch` from `src/lib/api/client.ts` (Task 2); `AuthUser` from `src/lib/auth/store.ts` (Task 3).
+- Produces: `registerFormSchema`, `loginFormSchema` (Zod) and `RegisterFormValues`, `LoginFormValues` types from `src/lib/validations/auth.ts`; `registerUser(input): Promise<{user: AuthUser; token: string}>`, `loginUser(input): Promise<{user: AuthUser; token: string}>`, `getMe(token): Promise<AuthUser>` from `src/lib/api/auth.ts`.
 
-No dedicated test: these are direct mirrors of the backend's own already-validated schemas, and thin pass-throughs to the already-tested `apiFetch`.
+No dedicated test: these are direct mirrors of the backend's own already-validated schemas, and thin pass-throughs to the already-tested `apiFetch`. Verified directly against the installed `zod@4.4.3`: `.trim()`, `.min(n, message)`, `.max(n)`, `.email(message)`, `.optional()`, and array-form `.enum([...])` all still work exactly as written, custom messages included.
 
-- [ ] **Step 1: Write `lib/validations/auth.ts`, mirroring the backend's `registerSchema`/`loginSchema` field-for-field**
+- [ ] **Step 1: Write `src/lib/validations/auth.ts`, mirroring the backend's `registerSchema`/`loginSchema` field-for-field**
 
 ```ts
 import { z } from 'zod';
@@ -475,7 +477,7 @@ export const loginFormSchema = z.object({
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
 ```
 
-- [ ] **Step 2: Write `lib/api/auth.ts`**
+- [ ] **Step 2: Write `src/lib/api/auth.ts`**
 
 ```ts
 import { apiFetch } from './client';
@@ -511,7 +513,7 @@ export const getMe = async (token: string): Promise<AuthUser> => {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add lib/validations/auth.ts lib/api/auth.ts
+git add src/lib/validations/auth.ts src/lib/api/auth.ts
 git commit -m "feat: add auth validation schemas and API functions"
 ```
 
@@ -519,12 +521,12 @@ git commit -m "feat: add auth validation schemas and API functions"
 
 ### Task 5: Root providers, layout, and error/loading/not-found fallbacks
 
-**Files:**
-- Create: `components/providers.tsx`
-- Modify: `app/layout.tsx`
-- Create: `app/error.tsx`
-- Create: `app/not-found.tsx`
-- Create: `app/loading.tsx`
+**Files (all under `src/` — this scaffold uses `--src-dir`):**
+- Create: `src/components/providers.tsx`
+- Modify: `src/app/layout.tsx`
+- Create: `src/app/error.tsx`
+- Create: `src/app/not-found.tsx`
+- Create: `src/app/loading.tsx`
 
 **Interfaces:**
 - Consumes: shadcn `Toaster` from `@/components/ui/sonner`, `Button` from `@/components/ui/button`, `Skeleton` from `@/components/ui/skeleton` (Task 1).
@@ -532,7 +534,7 @@ git commit -m "feat: add auth validation schemas and API functions"
 
 No dedicated test: JSX wiring with no branching logic.
 
-- [ ] **Step 1: Write `components/providers.tsx`**
+- [ ] **Step 1: Write `src/components/providers.tsx`**
 
 ```tsx
 'use client';
@@ -552,7 +554,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-- [ ] **Step 2: Rewrite `app/layout.tsx`**
+- [ ] **Step 2: Rewrite `src/app/layout.tsx`**
 
 ```tsx
 import type { Metadata } from 'next';
@@ -575,7 +577,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-- [ ] **Step 3: Write `app/error.tsx`**
+- [ ] **Step 3: Write `src/app/error.tsx`**
 
 ```tsx
 'use client';
@@ -593,7 +595,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 }
 ```
 
-- [ ] **Step 4: Write `app/not-found.tsx`**
+- [ ] **Step 4: Write `src/app/not-found.tsx`**
 
 ```tsx
 import Link from 'next/link';
@@ -612,7 +614,7 @@ export default function NotFound() {
 }
 ```
 
-- [ ] **Step 5: Write `app/loading.tsx`**
+- [ ] **Step 5: Write `src/app/loading.tsx`**
 
 ```tsx
 import { Skeleton } from '@/components/ui/skeleton';
@@ -636,7 +638,7 @@ Expected: build succeeds.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add components/providers.tsx app/layout.tsx app/error.tsx app/not-found.tsx app/loading.tsx
+git add src/components/providers.tsx src/app/layout.tsx src/app/error.tsx src/app/not-found.tsx src/app/loading.tsx
 git commit -m "feat: add root providers and global error/loading/not-found pages"
 ```
 
@@ -644,9 +646,9 @@ git commit -m "feat: add root providers and global error/loading/not-found pages
 
 ### Task 6: Auth hydration on load
 
-**Files:**
-- Create: `components/auth-hydrator.tsx`
-- Modify: `app/layout.tsx`
+**Files (all under `src/` — this scaffold uses `--src-dir`):**
+- Create: `src/components/auth-hydrator.tsx`
+- Modify: `src/app/layout.tsx`
 
 **Interfaces:**
 - Consumes: `useAuthStore` (Task 3), `getAuthCookie`/`clearAuthCookie` (Task 3), `getMe` (Task 4).
@@ -654,7 +656,7 @@ git commit -m "feat: add root providers and global error/loading/not-found pages
 
 No dedicated test: composition of already-tested/trivial units, exercised manually per Task 9's verification steps.
 
-- [ ] **Step 1: Write `components/auth-hydrator.tsx`**
+- [ ] **Step 1: Write `src/components/auth-hydrator.tsx`**
 
 ```tsx
 'use client';
@@ -688,7 +690,7 @@ export function AuthHydrator() {
 }
 ```
 
-- [ ] **Step 2: Update `app/layout.tsx` to mount it**
+- [ ] **Step 2: Update `src/app/layout.tsx` to mount it**
 
 ```tsx
 import type { Metadata } from 'next';
@@ -718,31 +720,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add components/auth-hydrator.tsx app/layout.tsx
+git add src/components/auth-hydrator.tsx src/app/layout.tsx
 git commit -m "feat: hydrate auth session on load via GET /auth/me"
 ```
 
 ---
 
-### Task 7: Middleware for role-gated dashboard routing
+### Task 7: Proxy (formerly "middleware") for role-gated dashboard routing
+
+**This Next.js version (16.2.12) deprecated the `middleware.ts` file convention** and renamed it to `proxy.ts` — confirmed directly against `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md` in the installed package, not assumed from prior Next.js versions. The exported function is renamed `middleware` → `proxy` (named export); `NextRequest`/`NextResponse`/`config.matcher` are unchanged. Per that doc: "Create a `proxy.ts` (or `.js`) file in the project root, or inside `src` if applicable, so that it is located at the same level as `pages` or `app`" — this scaffold uses `--src-dir`, so it goes in `src/proxy.ts`, not the repo root.
 
 **Files:**
-- Create: `middleware.ts` (repo root)
+- Create: `src/proxy.ts`
 
 **Interfaces:**
-- Consumes: `AUTH_COOKIE_NAME`, `ROLE_DASHBOARD_PATH` (Task 3's `lib/auth/constants.ts`), `decodeRoleFromToken` (Task 3's `lib/auth/decode-role.ts`, already tested).
+- Consumes: `AUTH_COOKIE_NAME`, `ROLE_DASHBOARD_PATH` (Task 3's `src/lib/auth/constants.ts`), `decodeRoleFromToken` (Task 3's `src/lib/auth/decode-role.ts`, already tested).
 - Produces: redirects unauthenticated or wrong-role requests away from `/dashboard/<role>/*`.
 
 No new test: the only branching logic (`decodeRoleFromToken`) is already covered in Task 3; the rest is direct wiring.
 
-- [ ] **Step 1: Write `middleware.ts`**
+- [ ] **Step 1: Write `src/proxy.ts`**
 
 ```ts
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME, ROLE_DASHBOARD_PATH } from '@/lib/auth/constants';
 import { decodeRoleFromToken } from '@/lib/auth/decode-role';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
 
   if (!token) {
@@ -772,22 +776,22 @@ export const config = {
 - [ ] **Step 2: Verify the build still succeeds**
 
 Run: `npm run build`
-Expected: build succeeds.
+Expected: build succeeds, with no "middleware is deprecated" or unrecognized-file warnings.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add middleware.ts
-git commit -m "feat: add middleware to gate dashboard routes by role"
+git add src/proxy.ts
+git commit -m "feat: add proxy to gate dashboard routes by role"
 ```
 
 ---
 
 ### Task 8: Navbar
 
-**Files:**
-- Create: `components/layout/navbar.tsx`
-- Modify: `app/layout.tsx`
+**Files (all under `src/` — this scaffold uses `--src-dir`):**
+- Create: `src/components/layout/navbar.tsx`
+- Modify: `src/app/layout.tsx`
 
 **Interfaces:**
 - Consumes: `useAuthStore`, `clearAuthCookie`, `ROLE_DASHBOARD_PATH` (Task 3); shadcn `Button`, `DropdownMenu*` (Task 1).
@@ -795,7 +799,7 @@ git commit -m "feat: add middleware to gate dashboard routes by role"
 
 No dedicated test: presentational component.
 
-- [ ] **Step 1: Write `components/layout/navbar.tsx`**
+- [ ] **Step 1: Write `src/components/layout/navbar.tsx`**
 
 ```tsx
 'use client';
@@ -863,7 +867,7 @@ export function Navbar() {
 }
 ```
 
-- [ ] **Step 2: Update `app/layout.tsx` to mount it**
+- [ ] **Step 2: Update `src/app/layout.tsx` to mount it**
 
 ```tsx
 import type { Metadata } from 'next';
@@ -895,7 +899,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add components/layout/navbar.tsx app/layout.tsx
+git add src/components/layout/navbar.tsx src/app/layout.tsx
 git commit -m "feat: add role-aware navbar"
 ```
 
@@ -903,23 +907,25 @@ git commit -m "feat: add role-aware navbar"
 
 ### Task 9: Register and login pages
 
-**Files:**
-- Create: `app/auth/register/page.tsx`
-- Create: `app/auth/login/page.tsx`
+**This shadcn generation has no `Form`/`FormField`/`FormControl`/`FormItem`/`FormLabel`/`FormMessage`** (Task 1 confirmed the `form` registry entry is a dead stub in this CLI version). Build directly against react-hook-form's own `register`/`Controller`/`formState.errors`, paired with shadcn's `Field`/`FieldLabel`/`FieldError`/`FieldGroup` (installed in Task 1) for layout and error display. `FieldError` takes an `errors` prop shaped as `Array<{message?: string} | undefined>` — pass `field.error ? [field.error] : undefined` reading from `formState.errors`.
+
+**Files (all under `src/` — this scaffold uses `--src-dir`):**
+- Create: `src/app/auth/register/page.tsx`
+- Create: `src/app/auth/login/page.tsx`
 
 **Interfaces:**
-- Consumes: `registerFormSchema`/`loginFormSchema`, `registerUser`/`loginUser` (Task 4); `setAuthCookie` (Task 3); `useAuthStore` (Task 3); `ROLE_DASHBOARD_PATH` (Task 3); `ApiError`, `stripFieldPrefix` (Task 2); shadcn `Form`, `Input`, `Button`, `Card`, `Select` (Task 1).
+- Consumes: `registerFormSchema`/`loginFormSchema`, `registerUser`/`loginUser` (Task 4); `setAuthCookie` (Task 3); `useAuthStore` (Task 3); `ROLE_DASHBOARD_PATH` (Task 3); `ApiError`, `stripFieldPrefix` (Task 2); shadcn `Field`, `FieldLabel`, `FieldError`, `FieldGroup`, `Input`, `Button`, `Card`, `Select` (Task 1); `Controller` from `react-hook-form`.
 - Produces: working `/auth/register` and `/auth/login` pages.
 
 No automated test (no test framework for component/e2e behavior per the spec) — manual verification steps below.
 
-- [ ] **Step 1: Write `app/auth/register/page.tsx`**
+- [ ] **Step 1: Write `src/app/auth/register/page.tsx`**
 
 ```tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -931,7 +937,7 @@ import { ROLE_DASHBOARD_PATH } from '@/lib/auth/constants';
 import { ApiError, stripFieldPrefix } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -939,7 +945,13 @@ export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  const form = useForm<RegisterFormValues>({
+  const {
+    register,
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: { name: '', email: '', password: '', phone: '', role: 'CUSTOMER' },
   });
@@ -955,7 +967,7 @@ export default function RegisterPage() {
     onError: (error: unknown) => {
       if (error instanceof ApiError && error.errorDetails) {
         error.errorDetails.forEach(({ field, message }) => {
-          form.setError(stripFieldPrefix(field) as keyof RegisterFormValues, { message });
+          setError(stripFieldPrefix(field) as keyof RegisterFormValues, { message });
         });
         return;
       }
@@ -974,86 +986,52 @@ export default function RegisterPage() {
           <CardTitle>Create an account</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>I am a</FormLabel>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <FieldGroup>
+              <Field data-invalid={!!errors.name}>
+                <FieldLabel htmlFor="name">Name</FieldLabel>
+                <Input id="name" {...register('name')} />
+                <FieldError errors={errors.name ? [errors.name] : undefined} />
+              </Field>
+              <Field data-invalid={!!errors.email}>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input id="email" type="email" {...register('email')} />
+                <FieldError errors={errors.email ? [errors.email] : undefined} />
+              </Field>
+              <Field data-invalid={!!errors.password}>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input id="password" type="password" {...register('password')} />
+                <FieldError errors={errors.password ? [errors.password] : undefined} />
+              </Field>
+              <Field data-invalid={!!errors.phone}>
+                <FieldLabel htmlFor="phone">Phone (optional)</FieldLabel>
+                <Input id="phone" {...register('phone')} />
+                <FieldError errors={errors.phone ? [errors.phone] : undefined} />
+              </Field>
+              <Field data-invalid={!!errors.role}>
+                <FieldLabel htmlFor="role">I am a</FieldLabel>
+                <Controller
+                  control={control}
+                  name="role"
+                  render={({ field }) => (
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
+                      <SelectTrigger id="role">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="CUSTOMER">Customer</SelectItem>
                         <SelectItem value="TECHNICIAN">Technician</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  )}
+                />
+                <FieldError errors={errors.role ? [errors.role] : undefined} />
+              </Field>
               <Button type="submit" className="w-full" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Creating account...' : 'Create account'}
               </Button>
-            </form>
-          </Form>
+            </FieldGroup>
+          </form>
         </CardContent>
       </Card>
     </div>
@@ -1061,7 +1039,7 @@ export default function RegisterPage() {
 }
 ```
 
-- [ ] **Step 2: Write `app/auth/login/page.tsx`**
+- [ ] **Step 2: Write `src/app/auth/login/page.tsx`**
 
 ```tsx
 'use client';
@@ -1079,14 +1057,19 @@ import { ROLE_DASHBOARD_PATH } from '@/lib/auth/constants';
 import { ApiError, stripFieldPrefix } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  const form = useForm<LoginFormValues>({
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: { email: '', password: '' },
   });
@@ -1102,7 +1085,7 @@ export default function LoginPage() {
     onError: (error: unknown) => {
       if (error instanceof ApiError && error.errorDetails) {
         error.errorDetails.forEach(({ field, message }) => {
-          form.setError(stripFieldPrefix(field) as keyof LoginFormValues, { message });
+          setError(stripFieldPrefix(field) as keyof LoginFormValues, { message });
         });
         return;
       }
@@ -1117,39 +1100,23 @@ export default function LoginPage() {
           <CardTitle>Log in</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+            <FieldGroup>
+              <Field data-invalid={!!errors.email}>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input id="email" type="email" {...register('email')} />
+                <FieldError errors={errors.email ? [errors.email] : undefined} />
+              </Field>
+              <Field data-invalid={!!errors.password}>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input id="password" type="password" {...register('password')} />
+                <FieldError errors={errors.password ? [errors.password] : undefined} />
+              </Field>
               <Button type="submit" className="w-full" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Logging in...' : 'Log in'}
               </Button>
-            </form>
-          </Form>
+            </FieldGroup>
+          </form>
         </CardContent>
       </Card>
     </div>
@@ -1168,7 +1135,7 @@ Run the backend (`cd /Users/joyntoghosh/FixitNow && npm run dev`) and this app (
 - [ ] **Step 4: Commit**
 
 ```bash
-git add app/auth/
+git add src/app/auth/
 git commit -m "feat: add register and login pages"
 ```
 
@@ -1176,13 +1143,13 @@ git commit -m "feat: add register and login pages"
 
 ### Task 10: Dashboard shell, per-role stub pages, payment stub pages
 
-**Files:**
-- Create: `app/dashboard/layout.tsx`
-- Create: `app/dashboard/customer/page.tsx`
-- Create: `app/dashboard/technician/page.tsx`
-- Create: `app/dashboard/admin/page.tsx`
-- Create: `app/payment/success/page.tsx`
-- Create: `app/payment/cancel/page.tsx`
+**Files (all under `src/` — this scaffold uses `--src-dir`):**
+- Create: `src/app/dashboard/layout.tsx`
+- Create: `src/app/dashboard/customer/page.tsx`
+- Create: `src/app/dashboard/technician/page.tsx`
+- Create: `src/app/dashboard/admin/page.tsx`
+- Create: `src/app/payment/success/page.tsx`
+- Create: `src/app/payment/cancel/page.tsx`
 
 **Interfaces:**
 - Consumes: `useAuthStore` (Task 3), `cn()` (Task 1's shadcn init output at `@/lib/utils`).
@@ -1190,7 +1157,7 @@ git commit -m "feat: add register and login pages"
 
 No automated test — manual verification below (this task is markup plus the already-tested middleware from Task 7).
 
-- [ ] **Step 1: Write `app/dashboard/layout.tsx`**
+- [ ] **Step 1: Write `src/app/dashboard/layout.tsx`**
 
 ```tsx
 'use client';
@@ -1237,7 +1204,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 ```
 
-- [ ] **Step 2: Write `app/dashboard/customer/page.tsx`**
+- [ ] **Step 2: Write `src/app/dashboard/customer/page.tsx`**
 
 ```tsx
 export default function CustomerDashboardPage() {
@@ -1250,7 +1217,7 @@ export default function CustomerDashboardPage() {
 }
 ```
 
-- [ ] **Step 3: Write `app/dashboard/technician/page.tsx`**
+- [ ] **Step 3: Write `src/app/dashboard/technician/page.tsx`**
 
 ```tsx
 export default function TechnicianDashboardPage() {
@@ -1263,7 +1230,7 @@ export default function TechnicianDashboardPage() {
 }
 ```
 
-- [ ] **Step 4: Write `app/dashboard/admin/page.tsx`**
+- [ ] **Step 4: Write `src/app/dashboard/admin/page.tsx`**
 
 ```tsx
 export default function AdminDashboardPage() {
@@ -1276,7 +1243,7 @@ export default function AdminDashboardPage() {
 }
 ```
 
-- [ ] **Step 5: Write `app/payment/success/page.tsx`**
+- [ ] **Step 5: Write `src/app/payment/success/page.tsx`**
 
 ```tsx
 export default function PaymentSuccessPage() {
@@ -1291,7 +1258,7 @@ export default function PaymentSuccessPage() {
 }
 ```
 
-- [ ] **Step 6: Write `app/payment/cancel/page.tsx`**
+- [ ] **Step 6: Write `src/app/payment/cancel/page.tsx`**
 
 ```tsx
 export default function PaymentCancelPage() {
@@ -1314,6 +1281,6 @@ Using the backend's seeded demo accounts (customer/technician/admin, see backend
 - [ ] **Step 8: Commit**
 
 ```bash
-git add app/dashboard/ app/payment/
+git add src/app/dashboard/ src/app/payment/
 git commit -m "feat: add dashboard shell, per-role stub pages, and payment stub pages"
 ```
