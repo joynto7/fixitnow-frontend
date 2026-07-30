@@ -106,6 +106,7 @@ git commit -m "chore: scaffold Next.js app with Tailwind, shadcn ui, and core de
 ### Task 2: API client and typed errors
 
 **Files (all under `src/` — this scaffold uses `--src-dir`; import paths below already use the `@/*` alias, which maps to `src/*` regardless):**
+- Modify: `package.json` (test script path — see Step 1)
 - Create: `src/lib/api/error.ts`
 - Create: `src/lib/api/client.ts`
 - Test: `src/lib/api/client.test.ts`
@@ -114,7 +115,15 @@ git commit -m "chore: scaffold Next.js app with Tailwind, shadcn ui, and core de
 - Consumes: nothing from earlier tasks (uses `NEXT_PUBLIC_API_URL` from Task 1's `.env.local`).
 - Produces: `class ApiError extends Error { status: number; errorDetails: {field: string; message: string}[] | null }`; `stripFieldPrefix(field: string): string`; `apiFetch<T>(path: string, options?: {token?: string | null; body?: unknown} & Omit<RequestInit, 'body'>): Promise<{data: T; meta?: Record<string, unknown>}>`.
 
-- [ ] **Step 1: Write `src/lib/api/error.ts`**
+- [ ] **Step 1: Fix the pre-existing test script path in `package.json`**
+
+Task 1 was executed before the `src/` path correction above landed, so its committed `package.json` still has the pre-correction, un-prefixed path. Fix it now, before writing anything else in this task, so the TDD cycle below (which relies on `npm test` pointing at the right file) behaves as expected:
+
+```json
+"test": "node --import tsx --test src/lib/api/client.test.ts"
+```
+
+- [ ] **Step 2: Write `src/lib/api/error.ts`**
 
 The backend validates each request as a whole `{body, query, params}` object (see `src/middlewares/validate.middleware.ts` in the backend repo), so a Zod failure on, say, the `email` field comes back as `errorDetails: [{field: "body.email", ...}]`, not `{field: "email", ...}`. Every form in every future sub-project needs this prefix stripped before mapping to React Hook Form's flat field names, so it belongs here alongside `ApiError`, not duplicated per-form.
 
@@ -142,7 +151,7 @@ export class ApiError extends Error {
 export const stripFieldPrefix = (field: string): string => field.replace(/^(body|query|params)\./, '');
 ```
 
-- [ ] **Step 2: Write the failing test `src/lib/api/client.test.ts`**
+- [ ] **Step 3: Write the failing test `src/lib/api/client.test.ts`**
 
 ```ts
 import { test } from 'node:test';
@@ -214,12 +223,12 @@ test('apiFetch throws ApiError on a network-level non-JSON failure status with n
 });
 ```
 
-- [ ] **Step 3: Run the test, verify it fails**
+- [ ] **Step 4: Run the test, verify it fails**
 
 Run: `npm test`
 Expected: FAIL — `Cannot find module './client'`
 
-- [ ] **Step 4: Write `src/lib/api/client.ts`**
+- [ ] **Step 5: Write `src/lib/api/client.ts`**
 
 ```ts
 import { ApiError } from './error';
@@ -271,12 +280,12 @@ export const apiFetch = async <T>(
 };
 ```
 
-- [ ] **Step 5: Run the test, verify it passes**
+- [ ] **Step 6: Run the test, verify it passes**
 
 Run: `npm test`
 Expected: PASS (4 tests)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/lib/api/error.ts src/lib/api/client.ts src/lib/api/client.test.ts package.json
