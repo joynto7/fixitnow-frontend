@@ -70,3 +70,52 @@ export const getTechnicianById = async (id: string): Promise<TechnicianDetail> =
   const { data } = await apiFetch<TechnicianDetail>(`/technicians/${id}`);
   return data;
 };
+
+export interface UpdateTechnicianProfileInput {
+  bio?: string;
+  experienceYears?: number;
+  location?: string;
+}
+
+export const updateOwnProfile = async (input: UpdateTechnicianProfileInput) => {
+  const { data } = await apiFetch<{
+    id: string;
+    userId: string;
+    bio: string | null;
+    experienceYears: number | null;
+    location: string | null;
+    avgRating: number;
+    totalReviews: number;
+  }>('/technician/profile', { method: 'PUT', body: input });
+  return data;
+};
+
+export interface AvailabilitySlot {
+  id: string;
+  technicianId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isBooked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SetAvailabilitySlotInput {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export const getOwnAvailability = async (): Promise<AvailabilitySlot[]> => {
+  const { data } = await apiFetch<AvailabilitySlot[]>('/technician/availability');
+  return data;
+};
+
+export const setOwnAvailability = async (slots: SetAvailabilitySlotInput[]): Promise<AvailabilitySlot[]> => {
+  const { data } = await apiFetch<AvailabilitySlot[]>('/technician/availability', {
+    method: 'PUT',
+    body: { slots },
+  });
+  return data;
+};

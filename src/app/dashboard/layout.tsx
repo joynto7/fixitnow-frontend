@@ -8,7 +8,10 @@ import { cn } from '@/lib/utils';
 
 const NAV_ITEMS: Record<'customer' | 'technician' | 'admin', { href: string; label: string }[]> = {
   customer: [{ href: '/dashboard/customer', label: 'Overview' }],
-  technician: [{ href: '/dashboard/technician', label: 'Overview' }],
+  technician: [
+    { href: '/dashboard/technician', label: 'Overview' },
+    { href: '/dashboard/technician/bookings', label: 'Bookings' },
+  ],
   admin: [{ href: '/dashboard/admin', label: 'Overview' }],
 };
 

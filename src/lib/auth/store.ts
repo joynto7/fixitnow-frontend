@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import type { Role } from './decode-role';
 
+export interface TechnicianProfileSummary {
+  id: string;
+  bio: string | null;
+  experienceYears: number | null;
+  location: string | null;
+  avgRating: number;
+  totalReviews: number;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -8,6 +17,9 @@ export interface AuthUser {
   phone: string | null;
   role: Role;
   status: 'ACTIVE' | 'BANNED';
+  // null for CUSTOMER/ADMIN. Populated by register/login/getMe - the only
+  // way this frontend has to learn a technician's own profile id.
+  technicianProfile: TechnicianProfileSummary | null;
 }
 
 interface AuthState {

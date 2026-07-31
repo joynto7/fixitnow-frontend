@@ -46,3 +46,26 @@ export const getServiceById = async (id: string): Promise<Service> => {
   const { data } = await apiFetch<Service>(`/services/${id}`);
   return data;
 };
+
+export interface CreateServiceInput {
+  title: string;
+  description?: string;
+  price: number;
+  categoryId: string;
+}
+
+export type UpdateServiceInput = Partial<CreateServiceInput>;
+
+export const createService = async (input: CreateServiceInput): Promise<Service> => {
+  const { data } = await apiFetch<Service>('/services', { method: 'POST', body: input });
+  return data;
+};
+
+export const updateService = async (id: string, input: UpdateServiceInput): Promise<Service> => {
+  const { data } = await apiFetch<Service>(`/services/${id}`, { method: 'PUT', body: input });
+  return data;
+};
+
+export const deleteService = async (id: string): Promise<void> => {
+  await apiFetch<null>(`/services/${id}`, { method: 'DELETE' });
+};

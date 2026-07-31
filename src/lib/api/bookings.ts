@@ -101,3 +101,20 @@ export const cancelBooking = async (id: string): Promise<Booking> => {
   const { data } = await apiFetch<Booking>(`/bookings/${id}/cancel`, { method: 'PATCH' });
   return data;
 };
+
+export const listTechnicianBookings = async (
+  params: ListBookingsParams = {}
+): Promise<{ items: Booking[]; meta: ListMeta }> => {
+  const { data, meta } = await apiFetch<Booking[], ListMeta>(`/technician/bookings${toQuery(params)}`);
+  return { items: data, meta: meta! };
+};
+
+export type TechnicianBookingAction = 'ACCEPT' | 'DECLINE' | 'START' | 'COMPLETE';
+
+export const updateTechnicianBookingStatus = async (
+  id: string,
+  action: TechnicianBookingAction
+): Promise<Booking> => {
+  const { data } = await apiFetch<Booking>(`/technician/bookings/${id}`, { method: 'PATCH', body: { action } });
+  return data;
+};

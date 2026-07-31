@@ -113,7 +113,7 @@ test('apiFetch defaults the Authorization header from the auth store when no tok
   }) as typeof fetch;
 
   useAuthStore.getState().setAuth(
-    { id: '1', name: 'A', email: 'a@a.com', phone: null, role: 'CUSTOMER', status: 'ACTIVE' },
+    { id: '1', name: 'A', email: 'a@a.com', phone: null, role: 'CUSTOMER', status: 'ACTIVE', technicianProfile: null },
     'store-token'
   );
   try {
@@ -132,7 +132,7 @@ test('apiFetch omits the Authorization header when token is explicitly null, eve
   }) as typeof fetch;
 
   useAuthStore.getState().setAuth(
-    { id: '1', name: 'A', email: 'a@a.com', phone: null, role: 'CUSTOMER', status: 'ACTIVE' },
+    { id: '1', name: 'A', email: 'a@a.com', phone: null, role: 'CUSTOMER', status: 'ACTIVE', technicianProfile: null },
     'store-token'
   );
   try {
