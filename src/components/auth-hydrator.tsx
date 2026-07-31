@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/lib/auth/store';
 import { getAuthCookie, clearAuthCookie } from '@/lib/auth/cookie';
 import { getMe } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/error';
 
 export function AuthHydrator() {
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -18,9 +19,11 @@ export function AuthHydrator() {
     }
     getMe(token)
       .then((user) => setAuth(user, token))
-      .catch(() => {
-        clearAuthCookie();
-        clearAuth();
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          clearAuthCookie();
+          clearAuth();
+        }
       })
       .finally(() => setHydrated());
   }, [setAuth, clearAuth, setHydrated]);
