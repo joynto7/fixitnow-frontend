@@ -6,13 +6,17 @@ import { listMyBookings } from '@/lib/api/bookings';
 import { listMyPayments } from '@/lib/api/payments';
 import { useAuthStore } from '@/lib/auth/store';
 import { BookingRow } from '@/components/booking-row';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const UPCOMING_STATUSES = new Set(['ACCEPTED', 'PAID', 'IN_PROGRESS']);
 
 export default function CustomerDashboardPage() {
   // Gate on isHydrated: the auth store's token is only set once AuthHydrator's
   // getMe() resolves, which races with this query firing on mount otherwise -
   // an ungated call silently 401s if it wins the race.
   const isHydrated = useAuthStore((state) => state.isHydrated);
+  const user = useAuthStore((state) => state.user);
   const bookingsQuery = useQuery({
     queryKey: ['bookings'],
     queryFn: () => listMyBookings({ limit: 50 }),
@@ -20,10 +24,30 @@ export default function CustomerDashboardPage() {
   });
   const paymentsQuery = useQuery({ queryKey: ['payments'], queryFn: listMyPayments, enabled: isHydrated });
 
+  const bookings = bookingsQuery.data?.items ?? [];
+  const upcomingCount = bookings.filter((b) => UPCOMING_STATUSES.has(b.status)).length;
+  const completedCount = bookings.filter((b) => b.status === 'COMPLETED').length;
+  const totalSpent = (paymentsQuery.data ?? [])
+    .filter((p) => p.status === 'COMPLETED')
+    .reduce((sum, p) => sum + Number(p.amount), 0);
+
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <h1 className="text-2xl font-semibold">Your bookings</h1>
+        <h1 className="font-heading text-2xl font-semibold">
+          {user ? `Welcome back, ${user.name.split(' ')[0]}` : 'Your dashboard'}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">Here&apos;s what&apos;s happening with your bookings.</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Upcoming bookings" value={bookingsQuery.isPending ? undefined : upcomingCount} />
+        <StatCard label="Completed jobs" value={bookingsQuery.isPending ? undefined : completedCount} />
+        <StatCard label="Total spent" value={paymentsQuery.isPending ? undefined : `$${totalSpent.toFixed(2)}`} />
+      </div>
+
+      <div>
+        <h2 className="font-heading text-xl font-semibold">Your bookings</h2>
         <div className="mt-4 flex flex-col gap-4">
           {bookingsQuery.isPending ? (
             <>
@@ -47,7 +71,7 @@ export default function CustomerDashboardPage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold">Payment history</h2>
+        <h2 className="font-heading text-xl font-semibold">Payment history</h2>
         <div className="mt-4">
           {paymentsQuery.isPending ? (
             <Skeleton className="h-24 w-full" />
@@ -84,5 +108,18 @@ export default function CustomerDashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string | number | undefined }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {value === undefined ? <Skeleton className="h-8 w-16" /> : <p className="text-2xl font-semibold">{value}</p>}
+      </CardContent>
+    </Card>
   );
 }

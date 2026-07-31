@@ -69,7 +69,7 @@ export interface Booking {
 
 export interface CreateBookingInput {
   serviceId: string;
-  scheduledDate: string;
+  availabilitySlotId: string;
   address: string;
   notes?: string;
 }

@@ -112,6 +112,11 @@ export const getOwnAvailability = async (): Promise<AvailabilitySlot[]> => {
   return data;
 };
 
+export const getTechnicianAvailability = async (technicianId: string): Promise<AvailabilitySlot[]> => {
+  const { data } = await apiFetch<AvailabilitySlot[]>(`/technicians/${technicianId}/availability`);
+  return data;
+};
+
 export const setOwnAvailability = async (slots: SetAvailabilitySlotInput[]): Promise<AvailabilitySlot[]> => {
   const { data } = await apiFetch<AvailabilitySlot[]>('/technician/availability', {
     method: 'PUT',

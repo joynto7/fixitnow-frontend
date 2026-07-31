@@ -2,12 +2,14 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getServiceById } from '@/lib/api/services';
 import { createBooking } from '@/lib/api/bookings';
+import { getTechnicianAvailability } from '@/lib/api/technicians';
+import type { AvailabilitySlot } from '@/lib/api/technicians';
 import { ApiError, stripFieldPrefix } from '@/lib/api/error';
 import { bookingFormSchema, type BookingFormValues } from '@/lib/validations/booking';
 import { useAuthStore } from '@/lib/auth/store';
@@ -17,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export default function BookServicePage() {
   const { serviceId } = useParams<{ serviceId: string }>();
@@ -28,22 +31,29 @@ export default function BookServicePage() {
     queryKey: ['service', serviceId],
     queryFn: () => getServiceById(serviceId),
   });
+  const technicianId = serviceQuery.data?.technicianId;
+  const availabilityQuery = useQuery({
+    queryKey: ['technician-availability', technicianId],
+    queryFn: () => getTechnicianAvailability(technicianId!),
+    enabled: !!technicianId,
+  });
 
   const {
+    control,
     register,
     handleSubmit,
     setError,
     formState: { errors },
   } = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
-    defaultValues: { scheduledDate: '', address: '', notes: '' },
+    defaultValues: { availabilitySlotId: '', address: '', notes: '' },
   });
 
   const mutation = useMutation({
     mutationFn: (values: BookingFormValues) =>
       createBooking({
         serviceId,
-        scheduledDate: new Date(values.scheduledDate).toISOString(),
+        availabilitySlotId: values.availabilitySlotId,
         address: values.address,
         notes: values.notes || undefined,
       }),
@@ -111,15 +121,21 @@ export default function BookServicePage() {
         <CardContent>
           <form onSubmit={handleSubmit((values) => mutation.mutate(values))}>
             <FieldGroup>
-              <Field data-invalid={!!errors.scheduledDate}>
-                <FieldLabel htmlFor="scheduledDate">Date &amp; time</FieldLabel>
-                <Input
-                  id="scheduledDate"
-                  type="datetime-local"
-                  aria-invalid={!!errors.scheduledDate}
-                  {...register('scheduledDate')}
+              <Field data-invalid={!!errors.availabilitySlotId}>
+                <FieldLabel>Date &amp; time</FieldLabel>
+                <Controller
+                  control={control}
+                  name="availabilitySlotId"
+                  render={({ field }) => (
+                    <SlotPicker
+                      slots={availabilityQuery.data ?? []}
+                      isPending={availabilityQuery.isPending}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
                 />
-                <FieldError errors={errors.scheduledDate ? [errors.scheduledDate] : undefined} />
+                <FieldError errors={errors.availabilitySlotId ? [errors.availabilitySlotId] : undefined} />
               </Field>
               <Field data-invalid={!!errors.address}>
                 <FieldLabel htmlFor="address">Address</FieldLabel>
@@ -138,6 +154,63 @@ export default function BookServicePage() {
           </form>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function SlotPicker({
+  slots,
+  isPending,
+  value,
+  onChange,
+}: {
+  slots: AvailabilitySlot[];
+  isPending: boolean;
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  if (isPending) {
+    return <Skeleton className="h-24 w-full" />;
+  }
+  if (slots.length === 0) {
+    return <p className="text-sm text-muted-foreground">This technician hasn&apos;t published any availability yet.</p>;
+  }
+
+  const byDate = new Map<string, AvailabilitySlot[]>();
+  for (const slot of slots) {
+    const key = slot.date.slice(0, 10);
+    byDate.set(key, [...(byDate.get(key) ?? []), slot]);
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {[...byDate.entries()].map(([date, daySlots]) => (
+        <div key={date}>
+          <p className="mb-1.5 text-sm font-medium">
+            {new Date(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {daySlots.map((slot) => (
+              <button
+                key={slot.id}
+                type="button"
+                disabled={slot.isBooked}
+                onClick={() => onChange(slot.id)}
+                className={cn(
+                  'rounded-md border px-2.5 py-1.5 text-sm transition-colors',
+                  slot.isBooked
+                    ? 'cursor-not-allowed border-dashed text-muted-foreground line-through'
+                    : value === slot.id
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                {slot.startTime}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

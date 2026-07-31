@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const bookingFormSchema = z.object({
-  scheduledDate: z.string().min(1, 'Pick a date and time'),
+  availabilitySlotId: z.string().min(1, 'Pick a time slot'),
   address: z.string().trim().min(5, 'Address is required').max(300),
   notes: z.string().trim().max(1000).optional().or(z.literal('')),
 });
