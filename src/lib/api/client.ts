@@ -13,6 +13,12 @@ interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
 }
 
+export interface ListMeta {
+  total: number;
+  page: number;
+  limit: number;
+}
+
 const getBaseUrl = (): string => {
   const url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
@@ -21,10 +27,21 @@ const getBaseUrl = (): string => {
   return url;
 };
 
-export const apiFetch = async <T>(
+export const toQuery = (params: object): string => {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params) as [string, string | number | undefined][]) {
+    if (value !== undefined && value !== '') {
+      query.set(key, String(value));
+    }
+  }
+  const qs = query.toString();
+  return qs ? `?${qs}` : '';
+};
+
+export const apiFetch = async <T, M = Record<string, unknown>>(
   path: string,
   options: ApiFetchOptions = {}
-): Promise<{ data: T; meta?: Record<string, unknown> }> => {
+): Promise<{ data: T; meta?: M }> => {
   const { token, body, headers, ...rest } = options;
 
   let response: Response;
@@ -54,5 +71,5 @@ export const apiFetch = async <T>(
     throw new ApiError(response.status, envelope.message, details);
   }
 
-  return { data: envelope.data, meta: envelope.meta };
+  return { data: envelope.data, meta: envelope.meta as M | undefined };
 };

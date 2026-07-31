@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apiFetch } from './client';
+import { apiFetch, toQuery } from './client';
 import { ApiError, stripFieldPrefix } from './error';
 
 test('stripFieldPrefix strips the body/query/params namespace but keeps nested paths', () => {
@@ -8,6 +8,15 @@ test('stripFieldPrefix strips the body/query/params namespace but keeps nested p
   assert.equal(stripFieldPrefix('body.slots.0.endTime'), 'slots.0.endTime');
   assert.equal(stripFieldPrefix('query.page'), 'page');
   assert.equal(stripFieldPrefix('role'), 'role');
+});
+
+test('toQuery omits undefined and empty-string values but keeps falsy numbers like 0', () => {
+  assert.equal(toQuery({ categoryId: undefined, search: '' }), '');
+  assert.equal(toQuery({ page: 0, limit: 20 }), '?page=0&limit=20');
+});
+
+test('toQuery stringifies mixed filter params in insertion order', () => {
+  assert.equal(toQuery({ categoryId: 'cat-1', minPrice: 10, search: undefined }), '?categoryId=cat-1&minPrice=10');
 });
 
 const originalFetch = global.fetch;
