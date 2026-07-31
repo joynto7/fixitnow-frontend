@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth/store';
 import { cn } from '@/lib/utils';
 
@@ -13,9 +14,17 @@ const NAV_ITEMS: Record<'customer' | 'technician' | 'admin', { href: string; lab
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const segment = pathname.split('/')[2] as 'customer' | 'technician' | 'admin' | undefined;
-  const items = segment ? NAV_ITEMS[segment] : [];
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+  const segment = pathname.split('/')[2];
+  const items = NAV_ITEMS[segment as keyof typeof NAV_ITEMS] ?? [];
+
+  useEffect(() => {
+    if (isHydrated && !user) {
+      router.replace('/auth/login');
+    }
+  }, [isHydrated, user, router]);
 
   return (
     <div className="mx-auto flex max-w-6xl gap-8 p-6">

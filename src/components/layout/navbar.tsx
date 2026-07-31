@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/auth/store';
 import { clearAuthCookie } from '@/lib/auth/cookie';
 import { ROLE_DASHBOARD_PATH } from '@/lib/auth/constants';
@@ -15,10 +16,13 @@ import {
 
 export function Navbar() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
   const handleLogout = () => {
+    queryClient.clear();
     clearAuthCookie();
     clearAuth();
     router.push('/');
@@ -34,7 +38,7 @@ export function Navbar() {
           <Link href="/services" className="text-sm">
             Browse services
           </Link>
-          {user ? (
+          {!isHydrated ? null : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="outline">{user.name}</Button>} />
               <DropdownMenuContent align="end">
