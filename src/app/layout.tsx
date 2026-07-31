@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/components/providers';
+import { AuthHydrator } from '@/components/auth-hydrator';
 
 export const metadata: Metadata = {
   title: 'FixItNow',
@@ -11,7 +12,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AuthHydrator />
+          {children}
+        </Providers>
       </body>
     </html>
   );
