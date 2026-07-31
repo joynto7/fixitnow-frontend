@@ -12,7 +12,11 @@ const NAV_ITEMS: Record<'customer' | 'technician' | 'admin', { href: string; lab
     { href: '/dashboard/technician', label: 'Overview' },
     { href: '/dashboard/technician/bookings', label: 'Bookings' },
   ],
-  admin: [{ href: '/dashboard/admin', label: 'Overview' }],
+  admin: [
+    { href: '/dashboard/admin', label: 'Overview' },
+    { href: '/dashboard/admin/users', label: 'Users' },
+    { href: '/dashboard/admin/categories', label: 'Categories' },
+  ],
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
