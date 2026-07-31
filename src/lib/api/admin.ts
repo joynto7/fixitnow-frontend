@@ -15,6 +15,7 @@ export interface AdminUser {
 export interface ListUsersParams {
   role?: Role;
   status?: 'ACTIVE' | 'BANNED';
+  search?: string;
   page?: number;
   limit?: number;
 }

@@ -7,29 +7,38 @@ import { listUsers, updateUserStatus } from '@/lib/api/admin';
 import { useAuthStore } from '@/lib/auth/store';
 import { UserStatusBadge } from '@/components/user-status-badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/pagination';
 
 const ROLE_ITEMS = { ALL: 'All roles', CUSTOMER: 'Customer', TECHNICIAN: 'Technician', ADMIN: 'Admin' };
 const STATUS_ITEMS = { ALL: 'All statuses', ACTIVE: 'Active', BANNED: 'Banned' };
+const PAGE_SIZE = 20;
 
 export function AdminUsersManager() {
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const queryClient = useQueryClient();
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [page, setPage] = useState(1);
 
   const usersQuery = useQuery({
-    queryKey: ['admin-users', roleFilter, statusFilter],
+    queryKey: ['admin-users', roleFilter, statusFilter, search, page],
     queryFn: () =>
       listUsers({
         role: roleFilter === 'ALL' ? undefined : (roleFilter as 'CUSTOMER' | 'TECHNICIAN' | 'ADMIN'),
         status: statusFilter === 'ALL' ? undefined : (statusFilter as 'ACTIVE' | 'BANNED'),
-        limit: 100,
+        search: search || undefined,
+        page,
+        limit: PAGE_SIZE,
       }),
     enabled: isHydrated,
   });
+  const totalPages = usersQuery.data ? Math.max(1, Math.ceil(usersQuery.data.meta.total / PAGE_SIZE)) : 1;
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'ACTIVE' | 'BANNED' }) => updateUserStatus(id, status),
@@ -46,8 +55,15 @@ export function AdminUsersManager() {
         <CardTitle>Users</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="flex gap-3">
-          <Select items={ROLE_ITEMS} value={roleFilter} onValueChange={(value) => setRoleFilter(value ?? 'ALL')}>
+        <div className="flex flex-wrap items-end gap-3">
+          <Select
+            items={ROLE_ITEMS}
+            value={roleFilter}
+            onValueChange={(value) => {
+              setRoleFilter(value ?? 'ALL');
+              setPage(1);
+            }}
+          >
             <SelectTrigger size="sm">
               <SelectValue />
             </SelectTrigger>
@@ -59,7 +75,14 @@ export function AdminUsersManager() {
               ))}
             </SelectContent>
           </Select>
-          <Select items={STATUS_ITEMS} value={statusFilter} onValueChange={(value) => setStatusFilter(value ?? 'ALL')}>
+          <Select
+            items={STATUS_ITEMS}
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value ?? 'ALL');
+              setPage(1);
+            }}
+          >
             <SelectTrigger size="sm">
               <SelectValue />
             </SelectTrigger>
@@ -71,6 +94,24 @@ export function AdminUsersManager() {
               ))}
             </SelectContent>
           </Select>
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearch(searchInput);
+              setPage(1);
+            }}
+          >
+            <Input
+              placeholder="Search name or email..."
+              className="h-7 w-56"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <Button type="submit" size="sm" variant="outline">
+              Search
+            </Button>
+          </form>
         </div>
 
         {usersQuery.isPending ? (
@@ -133,6 +174,7 @@ export function AdminUsersManager() {
             </table>
           </div>
         )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </CardContent>
     </Card>
   );
