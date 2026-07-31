@@ -606,6 +606,8 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
 - [ ] **Step 4: Write `src/app/not-found.tsx`**
 
+This shadcn generation's `Button` (and every other primitive here) is Base UI-based, not Radix — composition uses Base UI's `render` prop (pass the element to become as `render`, not as `asChild` + children; `render` is already part of every Base UI component's props, confirmed directly against `node_modules/@base-ui/react/internals/types.d.ts`, no wrapper modification needed):
+
 ```tsx
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -615,9 +617,7 @@ export default function NotFound() {
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
       <h1 className="text-2xl font-semibold">Page not found</h1>
       <p className="text-muted-foreground max-w-md">The page you&apos;re looking for doesn&apos;t exist or may have moved.</p>
-      <Button asChild>
-        <Link href="/">Back to home</Link>
-      </Button>
+      <Button render={<Link href="/">Back to home</Link>} />
     </div>
   );
 }
@@ -808,6 +808,8 @@ git commit -m "feat: add proxy to gate dashboard routes by role"
 
 No dedicated test: presentational component.
 
+This shadcn generation's `Button`, `DropdownMenuTrigger`, and `DropdownMenuItem` are all Base UI primitives — compose them with the `render` prop (pass the element to become directly as `render`, not as `asChild` + children):
+
 - [ ] **Step 1: Write `src/components/layout/navbar.tsx`**
 
 ```tsx
@@ -849,24 +851,18 @@ export function Navbar() {
           </Link>
           {user ? (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">{user.name}</Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger render={<Button variant="outline">{user.name}</Button>} />
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/${ROLE_DASHBOARD_PATH[user.role]}`}>Dashboard</Link>
-                </DropdownMenuItem>
+                <DropdownMenuItem
+                  render={<Link href={`/dashboard/${ROLE_DASHBOARD_PATH[user.role]}`}>Dashboard</Link>}
+                />
                 <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" asChild>
-                <Link href="/auth/login">Log in</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/auth/register">Sign up</Link>
-              </Button>
+              <Button variant="ghost" render={<Link href="/auth/login">Log in</Link>} />
+              <Button render={<Link href="/auth/register">Sign up</Link>} />
             </>
           )}
         </nav>
