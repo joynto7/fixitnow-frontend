@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { apiFetch, toQuery } from './client';
 import { ApiError, stripFieldPrefix } from './error';
+import { useAuthStore } from '../auth/store';
 
 test('stripFieldPrefix strips the body/query/params namespace but keeps nested paths', () => {
   assert.equal(stripFieldPrefix('body.email'), 'email');
@@ -102,4 +103,42 @@ test('apiFetch throws ApiError when fetch itself rejects on a network failure', 
       return true;
     }
   );
+});
+
+test('apiFetch defaults the Authorization header from the auth store when no token is passed', async () => {
+  let capturedHeaders: Record<string, string> = {};
+  global.fetch = (async (_url, init) => {
+    capturedHeaders = init?.headers as Record<string, string>;
+    return new Response(JSON.stringify({ success: true, message: 'ok', data: null }), { status: 200 });
+  }) as typeof fetch;
+
+  useAuthStore.getState().setAuth(
+    { id: '1', name: 'A', email: 'a@a.com', phone: null, role: 'CUSTOMER', status: 'ACTIVE' },
+    'store-token'
+  );
+  try {
+    await apiFetch('/bookings');
+    assert.equal(capturedHeaders.Authorization, 'Bearer store-token');
+  } finally {
+    useAuthStore.getState().clearAuth();
+  }
+});
+
+test('apiFetch omits the Authorization header when token is explicitly null, even with a stored session', async () => {
+  let capturedHeaders: Record<string, string> = {};
+  global.fetch = (async (_url, init) => {
+    capturedHeaders = init?.headers as Record<string, string>;
+    return new Response(JSON.stringify({ success: true, message: 'ok', data: null }), { status: 200 });
+  }) as typeof fetch;
+
+  useAuthStore.getState().setAuth(
+    { id: '1', name: 'A', email: 'a@a.com', phone: null, role: 'CUSTOMER', status: 'ACTIVE' },
+    'store-token'
+  );
+  try {
+    await apiFetch('/bookings', { token: null });
+    assert.equal(capturedHeaders.Authorization, undefined);
+  } finally {
+    useAuthStore.getState().clearAuth();
+  }
 });

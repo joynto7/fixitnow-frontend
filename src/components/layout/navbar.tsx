@@ -19,6 +19,7 @@ export function Navbar() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
+  const authCheckFailed = useAuthStore((state) => state.authCheckFailed);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
   const handleLogout = () => {
@@ -38,7 +39,7 @@ export function Navbar() {
           <Link href="/services" className="text-sm">
             Browse services
           </Link>
-          {!isHydrated ? null : user ? (
+          {!isHydrated || (!user && authCheckFailed) ? null : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="outline">{user.name}</Button>} />
               <DropdownMenuContent align="end">

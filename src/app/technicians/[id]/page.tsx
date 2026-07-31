@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { getTechnicianById } from '@/lib/api/technicians';
 import { ApiError } from '@/lib/api/error';
@@ -74,9 +75,7 @@ export default function TechnicianProfilePage() {
                     ) : null}
                     <p className="mt-1 text-lg font-semibold">${Number(service.price).toFixed(2)}</p>
                   </div>
-                  <Button disabled title="Booking opens in a future update">
-                    Book now
-                  </Button>
+                  <Button render={<Link href={`/book/${service.id}`}>Book now</Link>} />
                 </CardContent>
               </Card>
             ))}

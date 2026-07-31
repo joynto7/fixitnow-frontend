@@ -1,4 +1,5 @@
 import { ApiError } from './error';
+import { useAuthStore } from '../auth/store';
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -42,7 +43,7 @@ export const apiFetch = async <T, M = Record<string, unknown>>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<{ data: T; meta?: M }> => {
-  const { token, body, headers, ...rest } = options;
+  const { token = useAuthStore.getState().token, body, headers, ...rest } = options;
 
   let response: Response;
   try {
