@@ -17,14 +17,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
+  const authCheckFailed = useAuthStore((state) => state.authCheckFailed);
   const segment = pathname.split('/')[2];
   const items = NAV_ITEMS[segment as keyof typeof NAV_ITEMS] ?? [];
 
   useEffect(() => {
-    if (isHydrated && !user) {
+    // Only redirect on a confirmed logged-out state. If the auth check merely
+    // failed to complete (network/server error), the existing session might
+    // still be valid - don't bounce the user away over a transient hiccup.
+    if (isHydrated && !user && !authCheckFailed) {
       router.replace('/auth/login');
     }
-  }, [isHydrated, user, router]);
+  }, [isHydrated, user, authCheckFailed, router]);
 
   return (
     <div className="mx-auto flex max-w-6xl gap-8 p-6">

@@ -10,6 +10,7 @@ export function AuthHydrator() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const setHydrated = useAuthStore((state) => state.setHydrated);
+  const setAuthCheckFailed = useAuthStore((state) => state.setAuthCheckFailed);
 
   useEffect(() => {
     const token = getAuthCookie();
@@ -23,10 +24,14 @@ export function AuthHydrator() {
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           clearAuthCookie();
           clearAuth();
+        } else {
+          // Couldn't confirm either way (network/server error) - leave the
+          // existing session alone, just flag that this check was inconclusive.
+          setAuthCheckFailed(true);
         }
       })
       .finally(() => setHydrated());
-  }, [setAuth, clearAuth, setHydrated]);
+  }, [setAuth, clearAuth, setHydrated, setAuthCheckFailed]);
 
   return null;
 }
