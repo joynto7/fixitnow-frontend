@@ -7,6 +7,7 @@ import { useAuthStore } from '@/lib/auth/store';
 import { clearAuthCookie } from '@/lib/auth/cookie';
 import { ROLE_DASHBOARD_PATH } from '@/lib/auth/constants';
 import { Button } from '@/components/ui/button';
+import { ModeToggle } from '@/components/mode-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,7 @@ export function Navbar() {
           <Link href="/services" className="text-sm">
             Browse services
           </Link>
+          <ModeToggle />
           {!isHydrated || (!user && authCheckFailed) ? null : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="outline">{user.name}</Button>} />
