@@ -4,7 +4,7 @@ Next.js frontend for FixItNow, a home-services marketplace (Assignment 5). Consu
 
 Built in 5 sub-projects, each with its own spec/plan under `docs/superpowers/specs/` and `docs/superpowers/plans/`:
 1. **Foundation & Auth** — done (this covers scaffold, API client, auth, routing, shared error/loading patterns)
-2. Public browsing (home, services grid, technician profiles) — not started
+2. **Public browsing** — done (home page, `/services` browse+filter for both services and technicians, `/technicians/[id]` profile with services/reviews; booking itself is a sub-project 3 stub)
 3. Customer flow (booking, payment, reviews) — not started
 4. Technician flow (profile, availability, booking management) — not started
 5. Admin flow (users, categories, platform overview) — not started
@@ -18,13 +18,16 @@ Built in 5 sub-projects, each with its own spec/plan under `docs/superpowers/spe
 - **Shadcn UI is Base UI-based here, not Radix** (`"style": "base-nova"` in `components.json`). Concretely:
   - No `Form`/`FormField`/`FormControl`/`FormItem`/`FormLabel`/`FormMessage` — that registry entry is an empty stub. Build forms directly against react-hook-form's `register`/`Controller`/`formState.errors`, paired with `Field`/`FieldLabel`/`FieldError`/`FieldGroup` (`src/components/ui/field.tsx`). `FieldError` takes `errors={fieldState.error ? [fieldState.error] : undefined}`.
   - No `asChild` prop anywhere. Composition uses Base UI's `render` prop: `<Button render={<Link href="/x">text</Link>} />`, not `<Button asChild><Link>text</Link></Button>`. This applies to `Button`, `DropdownMenuTrigger`, `DropdownMenuItem`, and presumably every other Base UI-backed component here. Getting this wrong doesn't fail typecheck — it silently renders invalid nested-interactive HTML (`<button><a>...</a></button>`).
-  - `Select` needs an `items` prop (`Record<value, label>`) to show human labels in the closed trigger — `SelectItem` children only render inside the open popup list.
+  - `Select` needs an `items` prop (`Record<value, label>`) to show human labels in the closed trigger — `SelectItem` children only render inside the open popup list. Base UI's `Select` (like Radix) reserves the empty string for "no selection" — use an explicit sentinel value (e.g. `"all"`/`"any"`) for an unfiltered/default option instead of `value=""`.
+  - `Button` defaults `nativeButton={true}` (Base UI, see `node_modules/@base-ui/react/button/Button.mjs`), which logs a console error every time it's composed with `render={<Link>...}` — the render output is an `<a>`, not a `<button>`, so the native-button expectation is violated. `src/components/ui/button.tsx` now defaults `nativeButton={render === undefined}` so this is handled for every caller; don't pass `render` to the raw Base UI primitive directly without the same treatment.
 - **Zod v4.4.3.** The classic chainable API (`.trim()`, `.min(n, msg)`, `.email(msg)`, `.optional()`, array-form `.enum([...])`) still works with custom messages — verified directly, no v3→v4 migration needed for what's used here.
 - Data fetching: TanStack Query. State: Zustand (`src/lib/auth/store.ts`). Forms: React Hook Form + Zod. Cookies: `js-cookie`. Tests: `node:test` via `tsx` (no test framework installed — deliberate, see the Foundation & Auth spec's Testing section).
 
 ## Architecture
 
-- `src/lib/api/client.ts` — `apiFetch<T>()`, unwraps the backend's `{success, message, data, meta}` envelope, throws typed `ApiError`.
+- `src/lib/api/client.ts` — `apiFetch<T, M>()`, unwraps the backend's `{success, message, data, meta}` envelope, throws typed `ApiError`. Also exports `toQuery()` (builds a `?a=1&b=2` string, skipping `undefined`/`''` but keeping `0`) and `ListMeta` (`{total, page, limit}`, pass as the second type param to type a paginated endpoint's `meta`).
+  - Params objects for filtered list endpoints (e.g. `ListServicesParams`) are named interfaces, not `Record<string, ...>` — TS will *not* let you pass one directly where an index-signature type (`Record<string, X>`) is expected ("Index signature for type 'string' is missing"), even though every property matches. `toQuery`'s param type is loosened to plain `object` for exactly this reason; don't tighten it back to a `Record<...>` without re-hitting this.
+- `src/lib/api/categories.ts`, `services.ts`, `technicians.ts` — typed wrappers for the public browse endpoints. **The response shapes are richer than `src/docs/openapi.yaml` documents** — verify against the backend's actual Prisma `include` (e.g. `services.service.ts`'s `technicianInclude`, `technicians.service.ts`'s `publicTechnicianInclude`) rather than the OpenAPI spec, which has drifted before (see git history). Concretely: a `Service` includes the full `technician` (bio/avgRating/etc. + `user.name`), not just `technicianId`; a `Technician` list item includes `services` (with `category`), and the single-technician endpoint additionally includes `reviews` (with `customer.name`).
 - `src/lib/api/error.ts` — `ApiError` class + `stripFieldPrefix()`. **The backend validates `{body, query, params}` as a whole**, so Zod field errors come back as `"body.email"` etc. — always strip the prefix before mapping to a form's flat field names.
 - `src/lib/auth/` — `constants.ts` (cookie name, per-role dashboard paths), `decode-role.ts` (edge-safe JWT decode, no `Buffer`), `cookie.ts` (js-cookie wrapper), `store.ts` (zustand session store).
 - **Auth model:** backend returns a bearer JWT in the response body only (no cookie of its own). Frontend writes it to a client-set cookie + Zustand after login/register. `src/proxy.ts` does an **unsigned decode** of that cookie for routing convenience only — it is NOT a security boundary. Every real authorization check happens backend-side on each request.
@@ -36,10 +39,6 @@ Built in 5 sub-projects, each with its own spec/plan under `docs/superpowers/spe
 - **Admin revenue gap** (blocks sub-project 5): `GET /payments` returns empty for an admin caller (scoped to `customerId = requester.id`). No endpoint exists for admin-wide payment/revenue data yet.
 - **Availability/booking disconnect** (blocks sub-project 3): booking creation never checks the `Availability` table, and there's no public endpoint to see a technician's open slots. The spec's "show available vs. booked slots" time-slot picker isn't buildable as-is without a backend change or a scoped-down plain date/time input.
 
-## Known issue in Foundation & Auth (parked, needs a decision)
-
-`src/app/dashboard/layout.tsx`'s redirect-to-login effect fires whenever hydration completes with no user — but that includes a transient network blip or backend 5xx during hydration, not just a confirmed logged-out state. A genuinely-still-logged-in user can get bounced to `/auth/login` by a backend hiccup, even though their session cookie is untouched. Fix: distinguish "confirmed 401/403, no session" from "hydration inconclusive" before redirecting.
-
 ## Commands
 
 ```bash
@@ -49,8 +48,8 @@ npm test          # node:test via tsx — lib/api/client.test.ts, lib/auth/decod
 npm run lint
 ```
 
-Needs the backend running locally for real API calls: `cd ../FixitNow && npm run dev` (port 4000; see its own README for demo account credentials). `.env.local` already points `NEXT_PUBLIC_API_URL` at `http://localhost:4000/api`.
+Needs the backend running locally for real API calls: `cd ../FixitNow && npm run dev` (port 4000; see its own README for demo account credentials). `.env.local` is gitignored and **not** checked in — it does not exist on a fresh checkout despite what you'd assume; copy `.env.example` (`NEXT_PUBLIC_API_URL=http://localhost:4000/api`) before `npm run dev` or every request throws "NEXT_PUBLIC_API_URL is not set".
 
 ## Test data note
 
-A harmless test account from live verification is sitting in the shared dev database: `e2e-test-1785484800@fixitnow-test.com` ("E2E Test Customer"). No user-delete endpoint exists in the backend to remove it via the API — clean up at the DB level if it bothers you.
+The backend's `DATABASE_URL` (`../FixitNow/.env`) points at a shared Neon dev database, not a local Postgres — so real seed data (5 categories, 6 services, 7 bookings, demo accounts) is already there when you run the backend locally, but so is **accumulated cruft from repeated Postman collection runs**: categories/services/technicians named `Runner Category/Test Service/Technician <timestamp>` or `Diag Cat/Category <n>`. This is pre-existing test pollution, not a frontend bug — e.g. "featured services" (newest-first, limit 6) will show Postman junk before real seed services until someone runs `npm run seed` against that database to reset it. A harmless test account from live verification is also sitting there: `e2e-test-1785484800@fixitnow-test.com` ("E2E Test Customer"). No user-delete endpoint exists in the backend to remove either via the API — clean up at the DB level if it bothers you.
