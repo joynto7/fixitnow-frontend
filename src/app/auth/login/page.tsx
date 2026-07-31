@@ -60,12 +60,12 @@ export default function LoginPage() {
             <FieldGroup>
               <Field data-invalid={!!errors.email}>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" type="email" {...register('email')} />
+                <Input id="email" type="email" aria-invalid={!!errors.email} {...register('email')} />
                 <FieldError errors={errors.email ? [errors.email] : undefined} />
               </Field>
               <Field data-invalid={!!errors.password}>
                 <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input id="password" type="password" {...register('password')} />
+                <Input id="password" type="password" aria-invalid={!!errors.password} {...register('password')} />
                 <FieldError errors={errors.password ? [errors.password] : undefined} />
               </Field>
               <Button type="submit" className="w-full" disabled={mutation.isPending}>

@@ -17,6 +17,11 @@ import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+const ROLE_LABELS: Record<RegisterFormValues['role'], string> = {
+  CUSTOMER: 'Customer',
+  TECHNICIAN: 'Technician',
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -66,22 +71,22 @@ export default function RegisterPage() {
             <FieldGroup>
               <Field data-invalid={!!errors.name}>
                 <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input id="name" {...register('name')} />
+                <Input id="name" aria-invalid={!!errors.name} {...register('name')} />
                 <FieldError errors={errors.name ? [errors.name] : undefined} />
               </Field>
               <Field data-invalid={!!errors.email}>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" type="email" {...register('email')} />
+                <Input id="email" type="email" aria-invalid={!!errors.email} {...register('email')} />
                 <FieldError errors={errors.email ? [errors.email] : undefined} />
               </Field>
               <Field data-invalid={!!errors.password}>
                 <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input id="password" type="password" {...register('password')} />
+                <Input id="password" type="password" aria-invalid={!!errors.password} {...register('password')} />
                 <FieldError errors={errors.password ? [errors.password] : undefined} />
               </Field>
               <Field data-invalid={!!errors.phone}>
                 <FieldLabel htmlFor="phone">Phone (optional)</FieldLabel>
-                <Input id="phone" {...register('phone')} />
+                <Input id="phone" aria-invalid={!!errors.phone} {...register('phone')} />
                 <FieldError errors={errors.phone ? [errors.phone] : undefined} />
               </Field>
               <Field data-invalid={!!errors.role}>
@@ -90,8 +95,8 @@ export default function RegisterPage() {
                   control={control}
                   name="role"
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger id="role">
+                    <Select items={ROLE_LABELS} onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger id="role" aria-invalid={!!errors.role}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
