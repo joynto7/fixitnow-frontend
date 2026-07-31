@@ -52,6 +52,21 @@ sub-project:
 | Global client state | Zustand | Only real cross-cutting client state is the auth session (user + role); everything else lives in TanStack Query's cache |
 | Auth/Middleware bridging | Client-side cookie + Zustand hybrid | Backend returns the JWT in the response body only, no cookie. Next.js Middleware can only read cookies/headers, not localStorage, so the frontend itself writes the token into a cookie after login/register. No backend change needed; avoids proxying every endpoint through a BFF layer. |
 
+## As built (corrections)
+
+Implementation surfaced facts about the exact installed toolchain versions that weren't known when this spec was written. This doc's prose below is left as originally approved (it still describes the intent correctly); treat this table as the authoritative override wherever the two disagree:
+
+| This spec says | What actually shipped | Why |
+|---|---|---|
+| Shadcn `Form` component, built on RHF + Zod | No `Form`/`FormField`/`FormControl`/`FormItem`/`FormLabel`/`FormMessage` exist in this shadcn generation (Base UI-based, not Radix). Forms are built directly against RHF's `register`/`Controller`/`formState.errors`, paired with shadcn's `Field`/`FieldLabel`/`FieldError`/`FieldGroup` | The installed shadcn CLI generation (`base-nova` style) dropped `Form*` entirely — its registry entry is a stub |
+| `middleware.ts` | `src/proxy.ts`, exported function named `proxy` | This Next.js version (16.2.12) deprecated `middleware.ts` and renamed the convention |
+| `components/layout/dashboard-shell.tsx` | `src/app/dashboard/layout.tsx` | Next.js route-group layout convention, no separate shell component needed |
+| API client "attaches Bearer `<token>` from the Zustand store" automatically | Caller passes `token` explicitly per call (`apiFetch(path, {token})`); only `getMe` does today | No default-token wiring was built — every authenticated call in later sub-projects must remember to pass a token, or silently gets a 401. **Needs a deliberate decision before sub-project 3** (bookings/payments) starts — default-from-store vs. explicit-everywhere. |
+| `RegisterForm` / `LoginForm` as shared components | Page-level forms (`app/auth/register/page.tsx`, `app/auth/login/page.tsx`), no extracted components | Only 2 forms exist; extraction was premature at this scale |
+| A shared `toast.error(...)` helper the API client calls | The API client never toasts — each form's `onError` calls `toast.error` itself | Toasting is a UI concern; the client only throws typed errors |
+| `app/dashboard/loading.tsx` | Only the root `app/loading.tsx` exists | No per-dashboard loading state was needed yet (no data fetching in the stub pages) |
+| Middleware's cookie/role-gating logic is tested | `proxy.ts` itself has no test; only `decodeRoleFromToken` (the logic it calls) does | `proxy.ts` is straight-line wiring over an already-tested decode function |
+
 ## Architecture
 
 ```
