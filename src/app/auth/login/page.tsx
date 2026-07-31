@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,7 +15,7 @@ import { ApiError, stripFieldPrefix } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthShell } from '@/components/auth-shell';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,31 +51,32 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Log in</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-            <FieldGroup>
-              <Field data-invalid={!!errors.email}>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" type="email" aria-invalid={!!errors.email} {...register('email')} />
-                <FieldError errors={errors.email ? [errors.email] : undefined} />
-              </Field>
-              <Field data-invalid={!!errors.password}>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input id="password" type="password" aria-invalid={!!errors.password} {...register('password')} />
-                <FieldError errors={errors.password ? [errors.password] : undefined} />
-              </Field>
-              <Button type="submit" className="w-full" disabled={mutation.isPending}>
-                {mutation.isPending ? 'Logging in...' : 'Log in'}
-              </Button>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthShell>
+      <h1 className="font-heading text-2xl font-semibold">Welcome back</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Log in to manage your bookings.</p>
+      <form className="mt-6" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <FieldGroup>
+          <Field data-invalid={!!errors.email}>
+            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <Input id="email" type="email" aria-invalid={!!errors.email} {...register('email')} />
+            <FieldError errors={errors.email ? [errors.email] : undefined} />
+          </Field>
+          <Field data-invalid={!!errors.password}>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Input id="password" type="password" aria-invalid={!!errors.password} {...register('password')} />
+            <FieldError errors={errors.password ? [errors.password] : undefined} />
+          </Field>
+          <Button type="submit" className="w-full" disabled={mutation.isPending}>
+            {mutation.isPending ? 'Logging in...' : 'Log in'}
+          </Button>
+        </FieldGroup>
+      </form>
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{' '}
+        <Link href="/auth/register" className="font-medium text-primary hover:underline">
+          Sign up
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthShell } from '@/components/auth-shell';
 
 const ROLE_LABELS: Record<RegisterFormValues['role'], string> = {
   CUSTOMER: 'Customer',
@@ -61,14 +62,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="mx-auto max-w-sm py-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create an account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <FieldGroup>
+    <AuthShell>
+      <h1 className="font-heading text-2xl font-semibold">Create your account</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Book services or start taking jobs.</p>
+      <form className="mt-6" onSubmit={handleSubmit(onSubmit)}>
+        <FieldGroup>
               <Field data-invalid={!!errors.name}>
                 <FieldLabel htmlFor="name">Name</FieldLabel>
                 <Input id="name" aria-invalid={!!errors.name} {...register('name')} />
@@ -111,10 +109,14 @@ export default function RegisterPage() {
               <Button type="submit" className="w-full" disabled={mutation.isPending}>
                 {mutation.isPending ? 'Creating account...' : 'Create account'}
               </Button>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        </FieldGroup>
+      </form>
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Already have an account?{' '}
+        <Link href="/auth/login" className="font-medium text-primary hover:underline">
+          Log in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }
