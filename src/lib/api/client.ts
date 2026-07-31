@@ -27,20 +27,31 @@ export const apiFetch = async <T>(
 ): Promise<{ data: T; meta?: Record<string, unknown> }> => {
   const { token, body, headers, ...rest } = options;
 
-  const response = await fetch(`${getBaseUrl()}${path}`, {
-    ...rest,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${getBaseUrl()}${path}`, {
+      ...rest,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, 'Unable to reach the server. Check your connection and try again.');
+  }
 
-  const envelope = (await response.json()) as ApiEnvelope<T>;
+  let envelope: ApiEnvelope<T>;
+  try {
+    envelope = await response.json();
+  } catch {
+    throw new ApiError(response.status, 'Unexpected response from the server');
+  }
 
   if (!response.ok || !envelope.success) {
-    throw new ApiError(response.status, envelope.message, envelope.errorDetails ?? null);
+    const details = Array.isArray(envelope.errorDetails) && envelope.errorDetails.length ? envelope.errorDetails : null;
+    throw new ApiError(response.status, envelope.message, details);
   }
 
   return { data: envelope.data, meta: envelope.meta };

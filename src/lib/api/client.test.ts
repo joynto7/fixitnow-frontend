@@ -52,7 +52,7 @@ test('apiFetch throws ApiError with errorDetails on a failed envelope', async ()
   );
 });
 
-test('apiFetch throws ApiError on a network-level non-JSON failure status with no envelope fields', async () => {
+test('apiFetch throws ApiError with null errorDetails when the envelope omits errorDetails', async () => {
   global.fetch = (async () => new Response(JSON.stringify({ success: false, message: 'Not found' }), { status: 404 })) as typeof fetch;
 
   await assert.rejects(
@@ -61,6 +61,35 @@ test('apiFetch throws ApiError on a network-level non-JSON failure status with n
       assert.ok(err instanceof ApiError);
       assert.equal(err.status, 404);
       assert.equal(err.errorDetails, null);
+      return true;
+    }
+  );
+});
+
+test('apiFetch throws ApiError (not a raw SyntaxError) when the response body is not valid JSON', async () => {
+  global.fetch = (async () => new Response('<html>Bad Gateway</html>', { status: 502 })) as typeof fetch;
+
+  await assert.rejects(
+    () => apiFetch('/technicians/1'),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
+      assert.ok(!(err instanceof SyntaxError));
+      assert.equal(err.status, 502);
+      assert.equal(err.errorDetails, null);
+      return true;
+    }
+  );
+});
+
+test('apiFetch throws ApiError when fetch itself rejects on a network failure', async () => {
+  global.fetch = (async () => {
+    throw new TypeError('Failed to fetch');
+  }) as typeof fetch;
+
+  await assert.rejects(
+    () => apiFetch('/technicians/1'),
+    (err: unknown) => {
+      assert.ok(err instanceof ApiError);
       return true;
     }
   );
