@@ -29,6 +29,9 @@ export function Footer() {
           <Link href="/auth/register" className="hover:underline">
             Become a technician
           </Link>
+          <Link href="/api-list" className="hover:underline">
+            API list
+          </Link>
         </div>
       </div>
       <div className="border-t">
