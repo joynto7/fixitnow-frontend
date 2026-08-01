@@ -10,7 +10,7 @@ export function TechnicianCard({ technician }: { technician: Technician }) {
   const photoUrl = getUploadUrl(technician.photoUrl);
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full flex-col transition-transform duration-200 hover:-translate-y-1">
       <CardHeader className="flex-row items-center gap-3">
         <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-muted">
           {photoUrl ? (

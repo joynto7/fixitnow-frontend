@@ -23,7 +23,7 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <section className="flex flex-col items-start gap-4 rounded-3xl bg-[linear-gradient(135deg,var(--hero-glow)_0%,var(--background)_65%)] px-8 py-16">
+      <section className="flex flex-col items-start gap-4 rounded-3xl bg-[linear-gradient(135deg,var(--hero-from)_0%,var(--hero-to)_100%)] px-8 py-16">
         <h1 className="text-4xl font-semibold tracking-tight">Your trusted home service platform</h1>
         <p className="max-w-xl text-lg text-muted-foreground">
           Book vetted technicians for plumbing, electrical, cleaning, and more — pick a time slot and get it done.

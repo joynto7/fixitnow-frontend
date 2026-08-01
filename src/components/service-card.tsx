@@ -6,7 +6,7 @@ import type { Service } from '@/lib/api/services';
 
 export function ServiceCard({ service }: { service: Service }) {
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full flex-col transition-transform duration-200 hover:-translate-y-1">
       <CardHeader>
         <CardTitle>{service.title}</CardTitle>
         <CardDescription>{service.category.name}</CardDescription>
