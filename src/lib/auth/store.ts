@@ -6,6 +6,7 @@ export interface TechnicianProfileSummary {
   bio: string | null;
   experienceYears: number | null;
   location: string | null;
+  photoUrl: string | null;
   avgRating: number;
   totalReviews: number;
 }

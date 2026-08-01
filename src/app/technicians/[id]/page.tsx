@@ -2,8 +2,10 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { getTechnicianById } from '@/lib/api/technicians';
+import { getUploadUrl } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/error';
 import { StarRating } from '@/components/star-rating';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -41,17 +43,29 @@ export default function TechnicianProfilePage() {
   }
 
   const technician = query.data;
+  const photoUrl = getUploadUrl(technician.photoUrl);
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold">{technician.user.name}</h1>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <StarRating rating={technician.avgRating} totalReviews={technician.totalReviews} />
-          {technician.location ? <span>{technician.location}</span> : null}
-          {technician.experienceYears !== null ? <span>{technician.experienceYears} yrs experience</span> : null}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-muted">
+          {photoUrl ? (
+            <Image src={photoUrl} alt="" fill sizes="80px" unoptimized className="object-cover" />
+          ) : (
+            <div className="flex size-full items-center justify-center text-2xl font-semibold text-muted-foreground">
+              {technician.user.name.charAt(0).toUpperCase()}
+            </div>
+          )}
         </div>
-        {technician.bio ? <p className="max-w-2xl text-muted-foreground">{technician.bio}</p> : null}
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-semibold">{technician.user.name}</h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <StarRating rating={technician.avgRating} totalReviews={technician.totalReviews} />
+            {technician.location ? <span>{technician.location}</span> : null}
+            {technician.experienceYears !== null ? <span>{technician.experienceYears} yrs experience</span> : null}
+          </div>
+          {technician.bio ? <p className="max-w-2xl text-muted-foreground">{technician.bio}</p> : null}
+        </div>
       </div>
 
       <Separator className="my-8" />

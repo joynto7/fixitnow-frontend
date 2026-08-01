@@ -38,6 +38,7 @@ export interface Technician {
   bio: string | null;
   experienceYears: number | null;
   location: string | null;
+  photoUrl: string | null;
   avgRating: number;
   totalReviews: number;
   createdAt: string;
@@ -77,16 +78,29 @@ export interface UpdateTechnicianProfileInput {
   location?: string;
 }
 
-export const updateOwnProfile = async (input: UpdateTechnicianProfileInput) => {
-  const { data } = await apiFetch<{
-    id: string;
-    userId: string;
-    bio: string | null;
-    experienceYears: number | null;
-    location: string | null;
-    avgRating: number;
-    totalReviews: number;
-  }>('/technician/profile', { method: 'PUT', body: input });
+export interface OwnTechnicianProfile {
+  id: string;
+  userId: string;
+  bio: string | null;
+  experienceYears: number | null;
+  location: string | null;
+  photoUrl: string | null;
+  avgRating: number;
+  totalReviews: number;
+}
+
+export const updateOwnProfile = async (input: UpdateTechnicianProfileInput): Promise<OwnTechnicianProfile> => {
+  const { data } = await apiFetch<OwnTechnicianProfile>('/technician/profile', { method: 'PUT', body: input });
+  return data;
+};
+
+export const uploadOwnPhoto = async (file: File): Promise<OwnTechnicianProfile> => {
+  const formData = new FormData();
+  formData.append('photo', file);
+  const { data } = await apiFetch<OwnTechnicianProfile>('/technician/profile/photo', {
+    method: 'POST',
+    body: formData,
+  });
   return data;
 };
 

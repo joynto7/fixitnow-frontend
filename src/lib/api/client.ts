@@ -28,6 +28,15 @@ const getBaseUrl = (): string => {
   return url;
 };
 
+// Uploaded files are served from the API's origin at /uploads/..., not under
+// /api like everything else, so this can't just reuse getBaseUrl().
+export const getUploadUrl = (path: string | null | undefined): string | null => {
+  if (!path) return null;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) return null;
+  return `${apiUrl.replace(/\/api\/?$/, '')}${path}`;
+};
+
 export const toQuery = (params: object): string => {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params) as [string, string | number | undefined][]) {
@@ -45,16 +54,21 @@ export const apiFetch = async <T, M = Record<string, unknown>>(
 ): Promise<{ data: T; meta?: M }> => {
   const { token = useAuthStore.getState().token, body, headers, ...rest } = options;
 
+  // FormData bodies (file uploads) must NOT be JSON.stringify'd, and must NOT
+  // get an explicit Content-Type: the browser sets multipart/form-data with
+  // the correct boundary itself only when Content-Type is left unset.
+  const isFormData = body instanceof FormData;
+
   let response: Response;
   try {
     response = await fetch(`${getBaseUrl()}${path}`, {
       ...rest,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
     throw new ApiError(0, 'Unable to reach the server. Check your connection and try again.');
