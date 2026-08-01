@@ -7,6 +7,7 @@ export interface ServiceTechnician {
   bio: string | null;
   experienceYears: number | null;
   location: string | null;
+  photoUrl: string | null;
   avgRating: number;
   totalReviews: number;
   user: { id: string; name: string };

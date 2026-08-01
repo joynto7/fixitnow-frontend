@@ -36,11 +36,11 @@ export function Navbar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between p-4">
         <Link href="/" className="flex items-center gap-2 font-heading text-xl font-semibold">
           <svg viewBox="0 0 32 32" className="size-6" aria-hidden="true">
-            <rect width="32" height="32" rx="7" fill="#363b44" />
+            <rect width="32" height="32" rx="7" fill="#4f46e5" />
             <g transform="rotate(45 16 16)">
               <circle cx="16" cy="8" r="5.5" fill="#f4f6f8" />
-              <circle cx="16" cy="8" r="3" fill="#363b44" />
-              <rect x="14.2" y="1.2" width="3.6" height="4.8" fill="#363b44" />
+              <circle cx="16" cy="8" r="3" fill="#4f46e5" />
+              <rect x="14.2" y="1.2" width="3.6" height="4.8" fill="#4f46e5" />
               <rect x="14" y="12" width="4" height="16" rx="2" fill="#f4f6f8" />
             </g>
           </svg>

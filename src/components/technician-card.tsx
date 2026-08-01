@@ -11,17 +11,18 @@ export function TechnicianCard({ technician }: { technician: Technician }) {
 
   return (
     <Card className="flex h-full flex-col transition-transform duration-200 hover:-translate-y-1">
-      <CardHeader className="flex-row items-center gap-3">
-        <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-muted">
+      <div className="h-16 rounded-t-xl bg-[linear-gradient(135deg,var(--primary)_0%,var(--primary-glow)_100%)]" />
+      <CardHeader className="-mt-8 flex-row items-end gap-3">
+        <div className="relative size-14 shrink-0 overflow-hidden rounded-full bg-muted ring-4 ring-card">
           {photoUrl ? (
-            <Image src={photoUrl} alt="" fill sizes="40px" unoptimized className="object-cover" />
+            <Image src={photoUrl} alt="" fill sizes="56px" unoptimized className="object-cover" />
           ) : (
-            <div className="flex size-full items-center justify-center text-sm font-semibold text-muted-foreground">
+            <div className="flex size-full items-center justify-center text-base font-semibold text-muted-foreground">
               {technician.user.name.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
-        <div>
+        <div className="pb-0.5">
           <CardTitle>{technician.user.name}</CardTitle>
           <CardDescription>{technician.location ?? 'Location not specified'}</CardDescription>
         </div>
