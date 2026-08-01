@@ -1,6 +1,17 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function Footer() {
+  const pathname = usePathname();
+  // Auth pages use their own full-height branded layout (AuthShell), which
+  // already has a wordmark and copyright line — the marketing footer below it
+  // was pure redundant clutter, not a second piece of real content.
+  if (pathname.startsWith('/auth')) {
+    return null;
+  }
+
   return (
     <footer className="mt-auto border-t">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10 sm:flex-row sm:items-start sm:justify-between">
