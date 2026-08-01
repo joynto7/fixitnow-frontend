@@ -8,6 +8,7 @@ import { listTechnicians } from '@/lib/api/technicians';
 import { ServiceCard } from '@/components/service-card';
 import { TechnicianCard } from '@/components/technician-card';
 import { HeroCarousel } from '@/components/hero-carousel';
+import { RunningBanner } from '@/components/running-banner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -24,7 +25,7 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <section className="grid items-center gap-8 rounded-3xl bg-[linear-gradient(135deg,var(--hero-from)_0%,var(--hero-to)_100%)] px-8 py-16 lg:grid-cols-2">
+      <section className="flex flex-col items-start gap-6 rounded-3xl bg-[linear-gradient(135deg,var(--hero-from)_0%,var(--hero-to)_100%)] px-8 py-16">
         <div className="flex flex-col items-start gap-4">
           <h1 className="text-4xl font-semibold tracking-tight">Your trusted home service platform</h1>
           <p className="max-w-xl text-lg text-muted-foreground">
@@ -32,8 +33,14 @@ export default function Home() {
           </p>
           <Button size="lg" render={<Link href="/services">Browse services</Link>} />
         </div>
-        {techniciansQuery.data?.items.length ? <HeroCarousel technicians={techniciansQuery.data.items} /> : null}
+        <RunningBanner />
       </section>
+
+      {techniciansQuery.data?.items.length ? (
+        <section className="py-8">
+          <HeroCarousel technicians={techniciansQuery.data.items} />
+        </section>
+      ) : null}
 
       <section className="py-8">
         <h2 className="mb-4 text-xl font-semibold">Categories</h2>
