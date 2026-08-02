@@ -28,10 +28,13 @@ const getBaseUrl = (): string => {
   return url;
 };
 
-// Uploaded files are served from the API's origin at /uploads/..., not under
-// /api like everything else, so this can't just reuse getBaseUrl().
+// Technician photos now upload straight to Cloudflare R2 (a full, absolute
+// URL) rather than the API's own /uploads/... path, so this passes an
+// already-absolute URL straight through instead of prefixing it with the
+// API origin - prefixing it would mangle it into a broken concatenated URL.
 export const getUploadUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   if (!apiUrl) return null;
   return `${apiUrl.replace(/\/api\/?$/, '')}${path}`;
