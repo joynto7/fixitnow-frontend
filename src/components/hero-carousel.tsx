@@ -38,11 +38,11 @@ export function HeroCarousel({ technicians }: { technicians: Technician[] }) {
               i === index ? 'opacity-100' : 'pointer-events-none opacity-0'
             }`}
           >
-            <div className="relative size-20 overflow-hidden rounded-full ring-4 ring-primary/20">
+            <div className="relative size-32 overflow-hidden rounded-full ring-4 ring-primary/20">
               {photoUrl ? (
-                <Image src={photoUrl} alt="" fill sizes="80px" unoptimized className="object-cover" />
+                <Image src={photoUrl} alt="" fill sizes="128px" unoptimized className="object-cover" />
               ) : (
-                <div className="flex size-full items-center justify-center bg-[linear-gradient(135deg,var(--primary)_0%,var(--primary-glow)_100%)] text-xl font-semibold text-white">
+                <div className="flex size-full items-center justify-center bg-[linear-gradient(135deg,var(--primary)_0%,var(--primary-glow)_100%)] text-3xl font-semibold text-white">
                   {tech.user.name.charAt(0).toUpperCase()}
                 </div>
               )}
