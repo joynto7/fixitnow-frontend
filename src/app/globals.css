@@ -49,8 +49,8 @@
 }
 
 :root {
-  --background: #0b0620;
-  --foreground: #f5f3ff;
+  --background: #ffffff;
+  --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
@@ -61,15 +61,15 @@
   --secondary: #f8fafc;
   --secondary-foreground: #0f172a;
   --muted: #f1f5f9;
-  --muted-foreground: #a5b4fc;
+  --muted-foreground: #64748b;
   --accent: #eef2ff;
   --accent-foreground: #4f46e5;
   --destructive: #ef4444;
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #4f46e5;
-  --hero-from: #312e81;
-  --hero-to: #0b0620;
+  --hero-from: color-mix(in srgb, #4f46e5 40%, white);
+  --hero-to: #ffffff;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -129,7 +129,7 @@
   }
   body {
     @apply text-foreground;
-    background: linear-gradient(180deg, #1e1b4b 0%, #0b0620 100%) fixed;
+    background: linear-gradient(135deg, color-mix(in srgb, #4f46e5 40%, white) 0%, #ffffff 100%) fixed;
   }
   html {
     @apply font-sans;
