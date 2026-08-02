@@ -1,16 +1,24 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/star-rating';
+import { getUploadUrl } from '@/lib/api/client';
 import type { Technician } from '@/lib/api/technicians';
 
 export function TechnicianCard({ technician }: { technician: Technician }) {
+  const photoUrl = getUploadUrl(technician.photoUrl);
+
   return (
     <Card className="flex h-full flex-col transition-transform duration-200 hover:-translate-y-1">
       <div className="h-16 rounded-t-xl bg-[linear-gradient(135deg,var(--primary)_0%,var(--primary-glow)_100%)]" />
       <CardHeader className="-mt-8 flex-row items-end gap-3">
         <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-base font-semibold text-muted-foreground ring-4 ring-card">
-          {technician.user.name.charAt(0).toUpperCase()}
+          {photoUrl ? (
+            <Image src={photoUrl} alt="" fill sizes="56px" unoptimized className="object-cover" />
+          ) : (
+            technician.user.name.charAt(0).toUpperCase()
+          )}
         </div>
         <div className="pb-0.5">
           <CardTitle>{technician.user.name}</CardTitle>
