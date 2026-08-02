@@ -253,7 +253,14 @@ function AddSlotForm({ onAdd }: { onAdd: (startTime: string, endTime: string) =>
         size="sm"
         variant="outline"
         onClick={() => {
-          if (!startTime || !endTime) return;
+          if (!startTime || !endTime) {
+            toast.error('Pick a start and end time first');
+            return;
+          }
+          if (startTime >= endTime) {
+            toast.error('Start time must be before end time');
+            return;
+          }
           onAdd(startTime, endTime);
           setStartTime('');
           setEndTime('');
