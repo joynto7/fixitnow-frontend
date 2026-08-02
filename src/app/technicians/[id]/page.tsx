@@ -8,6 +8,7 @@ import { getTechnicianById } from '@/lib/api/technicians';
 import { getUploadUrl } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/error';
 import { StarRating } from '@/components/star-rating';
+import { ServiceMediaCarousel } from '@/components/service-media-carousel';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -78,6 +79,7 @@ export default function TechnicianProfilePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {technician.services.map((service) => (
               <Card key={service.id}>
+                <ServiceMediaCarousel media={service.media} />
                 <CardHeader>
                   <CardTitle>{service.title}</CardTitle>
                   <CardDescription>{service.category.name}</CardDescription>

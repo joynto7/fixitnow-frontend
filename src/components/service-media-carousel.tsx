@@ -16,14 +16,14 @@ export function ServiceMediaCarousel({ media }: { media: ServiceMedia[] }) {
 
   if (media.length === 0) {
     return (
-      <div className="flex h-28 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--primary)_0%,var(--primary-glow)_100%)]">
+      <div className="flex h-56 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--primary)_0%,var(--primary-glow)_100%)]">
         <WrenchIcon className="size-8 text-white/80" aria-hidden="true" />
       </div>
     );
   }
 
   return (
-    <div className="group relative h-28 overflow-hidden rounded-xl bg-muted">
+    <div className="group relative h-56 overflow-hidden rounded-xl bg-black">
       {media.map((item, i) => (
         <div
           key={item.id}
@@ -38,10 +38,17 @@ export function ServiceMediaCarousel({ media }: { media: ServiceMedia[] }) {
               fill
               sizes="(min-width: 1024px) 320px, 50vw"
               unoptimized
-              className="object-cover"
+              className="object-contain"
             />
           ) : (
-            <video src={item.url} controls muted playsInline preload="metadata" className="size-full object-cover" />
+            <video
+              src={item.url}
+              controls
+              muted
+              playsInline
+              preload="metadata"
+              className="size-full object-contain"
+            />
           )}
         </div>
       ))}

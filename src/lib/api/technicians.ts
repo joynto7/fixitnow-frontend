@@ -1,5 +1,6 @@
 import { apiFetch, toQuery, type ListMeta } from './client';
 import type { Category } from './categories';
+import type { ServiceMedia } from './services';
 
 export interface TechnicianServiceSummary {
   id: string;
@@ -11,6 +12,7 @@ export interface TechnicianServiceSummary {
   createdAt: string;
   updatedAt: string;
   category: Category;
+  media: ServiceMedia[];
 }
 
 export interface TechnicianUser {
