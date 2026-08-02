@@ -13,6 +13,14 @@ export interface ServiceTechnician {
   user: { id: string; name: string };
 }
 
+export interface ServiceMedia {
+  id: string;
+  serviceId: string;
+  url: string;
+  type: 'PHOTO' | 'VIDEO';
+  createdAt: string;
+}
+
 export interface Service {
   id: string;
   title: string;
@@ -24,6 +32,7 @@ export interface Service {
   updatedAt: string;
   category: Category;
   technician: ServiceTechnician;
+  media: ServiceMedia[];
 }
 
 export interface ListServicesParams {
@@ -69,4 +78,18 @@ export const updateService = async (id: string, input: UpdateServiceInput): Prom
 
 export const deleteService = async (id: string): Promise<void> => {
   await apiFetch<null>(`/services/${id}`, { method: 'DELETE' });
+};
+
+export const uploadServiceMedia = async (serviceId: string, file: File): Promise<ServiceMedia> => {
+  const formData = new FormData();
+  formData.append('media', file);
+  const { data } = await apiFetch<ServiceMedia>(`/services/${serviceId}/media`, {
+    method: 'POST',
+    body: formData,
+  });
+  return data;
+};
+
+export const deleteServiceMedia = async (serviceId: string, mediaId: string): Promise<void> => {
+  await apiFetch<null>(`/services/${serviceId}/media/${mediaId}`, { method: 'DELETE' });
 };

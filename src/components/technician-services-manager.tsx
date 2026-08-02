@@ -1,12 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import Image from 'next/image';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { ImagePlusIcon, PlayIcon, XIcon } from 'lucide-react';
 import { listCategories, type Category } from '@/lib/api/categories';
-import { listServices, createService, updateService, deleteService, type Service } from '@/lib/api/services';
+import {
+  listServices,
+  createService,
+  updateService,
+  deleteService,
+  uploadServiceMedia,
+  deleteServiceMedia,
+  type Service,
+} from '@/lib/api/services';
 import { ApiError, stripFieldPrefix } from '@/lib/api/error';
 import { serviceFormSchema, type ServiceFormValues } from '@/lib/validations/technician';
 import { useAuthStore } from '@/lib/auth/store';
@@ -22,6 +32,7 @@ export function TechnicianServicesManager() {
   const technicianId = useAuthStore((state) => state.user?.technicianProfile?.id);
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Service | 'new' | null>(null);
+  const [mediaFor, setMediaFor] = useState<string | null>(null);
 
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: listCategories });
   const servicesQuery = useQuery({
@@ -57,30 +68,40 @@ export function TechnicianServicesManager() {
               <p className="text-sm text-muted-foreground">No services yet.</p>
             ) : (
               servicesQuery.data.items.map((service) => (
-                <div key={service.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="font-medium">{service.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {service.category.name} · ${Number(service.price).toFixed(2)}
-                    </p>
+                <div key={service.id} className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{service.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {service.category.name} · ${Number(service.price).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setMediaFor(mediaFor === service.id ? null : service.id)}
+                      >
+                        Media{service.media.length ? ` (${service.media.length})` : ''}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditing(service)}>
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => {
+                          if (window.confirm(`Delete "${service.title}"?`)) {
+                            deleteMutation.mutate(service.id);
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditing(service)}>
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => {
-                        if (window.confirm(`Delete "${service.title}"?`)) {
-                          deleteMutation.mutate(service.id);
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+                  {mediaFor === service.id ? <ServiceMediaPanel service={service} /> : null}
                 </div>
               ))
             )}
@@ -211,5 +232,84 @@ function ServiceForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function ServiceMediaPanel({ service }: { service: Service }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['my-services'] });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadServiceMedia(service.id, file),
+    onSuccess: () => {
+      toast.success('Media uploaded');
+      invalidate();
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : 'Could not upload media'),
+  });
+
+  const deleteMediaMutation = useMutation({
+    mutationFn: (mediaId: string) => deleteServiceMedia(service.id, mediaId),
+    onSuccess: () => {
+      toast.success('Media removed');
+      invalidate();
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : 'Could not remove media'),
+  });
+
+  return (
+    <div className="mt-3 flex flex-col gap-3 border-t pt-3">
+      {service.media.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No work photos or videos yet.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {service.media.map((media) => (
+            <div key={media.id} className="group relative size-16 overflow-hidden rounded-md bg-muted">
+              {media.type === 'PHOTO' ? (
+                <Image src={media.url} alt="" fill sizes="64px" unoptimized className="object-cover" />
+              ) : (
+                <>
+                  <video src={media.url} muted playsInline className="size-full object-cover" />
+                  <PlayIcon className="absolute inset-0 m-auto size-5 text-white drop-shadow" aria-hidden="true" />
+                </>
+              )}
+              <button
+                type="button"
+                aria-label="Remove media"
+                disabled={deleteMediaMutation.isPending}
+                onClick={() => deleteMediaMutation.mutate(media.id)}
+                className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                <XIcon className="size-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) uploadMutation.mutate(file);
+            e.target.value = '';
+          }}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={uploadMutation.isPending}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <ImagePlusIcon className="size-4" aria-hidden="true" />
+          {uploadMutation.isPending ? 'Uploading...' : 'Add photo or video'}
+        </Button>
+      </div>
+    </div>
   );
 }
