@@ -1,16 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { WrenchIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import type { ServiceMedia } from '@/lib/api/services';
 
 export function ServiceMediaCarousel({ media }: { media: ServiceMedia[] }) {
   const [index, setIndex] = useState(0);
+  const videoPlayingRef = useRef(false);
 
+  const advance = () => setIndex((i) => (i < media.length - 1 ? i + 1 : i));
+
+  // Auto-advance runs through the media once, not on a forever loop, and
+  // pauses while a video is actively playing so it doesn't get cut off.
   useEffect(() => {
     if (media.length <= 1) return;
-    const id = setInterval(() => setIndex((i) => (i + 1) % media.length), 3500);
+    const id = setInterval(() => {
+      if (videoPlayingRef.current) return;
+      setIndex((i) => {
+        if (i >= media.length - 1) {
+          clearInterval(id);
+          return i;
+        }
+        return i + 1;
+      });
+    }, 3500);
     return () => clearInterval(id);
   }, [media.length]);
 
@@ -48,6 +62,13 @@ export function ServiceMediaCarousel({ media }: { media: ServiceMedia[] }) {
               playsInline
               preload="metadata"
               className="size-full object-contain"
+              onPlay={() => {
+                videoPlayingRef.current = true;
+              }}
+              onPause={() => {
+                videoPlayingRef.current = false;
+                advance();
+              }}
             />
           )}
         </div>
