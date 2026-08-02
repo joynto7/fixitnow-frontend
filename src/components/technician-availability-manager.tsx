@@ -235,8 +235,8 @@ function AvailabilityEditor({ slots }: { slots: AvailabilitySlot[] }) {
 }
 
 function AddSlotForm({ onAdd }: { onAdd: (startTime: string, endTime: string) => void }) {
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('17:00');
 
   return (
     <div className="mt-3 flex flex-wrap items-end gap-2">
@@ -262,8 +262,8 @@ function AddSlotForm({ onAdd }: { onAdd: (startTime: string, endTime: string) =>
             return;
           }
           onAdd(startTime, endTime);
-          setStartTime('');
-          setEndTime('');
+          setStartTime('09:00');
+          setEndTime('17:00');
         }}
       >
         Add slot
